@@ -1,9 +1,14 @@
+package it.unipi.rcl.project.common;
+
+import it.unipi.rcl.project.server.ConfigurationParameter;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Utils {
@@ -22,7 +27,7 @@ public class Utils {
 		return new String(digest.digest(in.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 	}
 
-	private static HashMap<ConfigurationParameter, Object> getDefaultConf(){
+	private static Map<ConfigurationParameter, Object> getDefaultConf(){
 		HashMap<ConfigurationParameter, Object> out = new HashMap<>(10);
 		out.put(ConfigurationParameter.SERVER, "127.0.0.1");
 		out.put(ConfigurationParameter.TCPPORT, 6666);
@@ -35,9 +40,9 @@ public class Utils {
 		return out;
 	}
 
-	public static HashMap<ConfigurationParameter, Object> readConfFile(String path){
+	public static Map<ConfigurationParameter, Object> readConfFile(String path){
 		File confFile = new File(path);
-		HashMap<ConfigurationParameter, Object> out = getDefaultConf();
+		Map<ConfigurationParameter, Object> out = getDefaultConf();
 		try {
 			Scanner scanner = new Scanner(confFile);
 		} catch (FileNotFoundException e) {
