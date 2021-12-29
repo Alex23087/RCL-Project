@@ -41,7 +41,7 @@ public class ClientHandler implements Runnable{
 				switch (cmd.op) {
 					case Login:
 						if (user != null) {
-							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]User already logged in");
+							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]User already logged in");
 							ous.writeObject(ErrorMessage.UserAlreadyLoggedIn);
 							ous.flush();
 						} else {
@@ -62,11 +62,38 @@ public class ClientHandler implements Runnable{
 							}
 						}
 						break;
+					case GetFeed:
+						ous.writeObject(ServerData.getFeed(user));
+						break;
+					case GetPosts:
+						if(cmd.parameters == null) {
+							ous.writeObject(ServerData.getPosts(user));
+						}else{
+							User u = ServerData.getUser(Integer.parseInt(cmd.parameters[0]));
+							if(u == null){
+								ous.writeObject(ErrorMessage.NoSuchUser);
+							}else{
+								ous.writeObject(ServerData.getPosts(u));
+							}
+						}
+						break;
+					case GetBalance:
+						ous.writeObject(user.balance);
+						break;
+					case PublishPost:
+						//TODO: error checking
+						int id = ServerData.addPost(user, cmd.parameters[0], cmd.parameters[1]);
+						ous.writeObject(id);
+						System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Created new post with id " + id);
+						break;
+					case Rewin:
+						id = ServerData.addRewin(user, Integer.parseInt(cmd.parameters[0]));
+						break;
 					default:
 						break;
 				}
 			} catch (SocketException se){
-				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Disconnected");
+				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
 				break;
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();

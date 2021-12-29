@@ -5,7 +5,12 @@ import java.util.Arrays;
 
 public class Command implements Serializable {
 	public enum Operation{
-		Login
+		Login,
+		GetFeed,
+		GetPosts,
+		PublishPost,
+		Rewin,
+		GetBalance
 	}
 
 	public Operation op;

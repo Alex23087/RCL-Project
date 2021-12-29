@@ -10,6 +10,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.List;
 
 public class ServerProxy{
 	public static ServerProxy instance = new ServerProxy();
@@ -99,6 +100,48 @@ public class ServerProxy{
 		} catch (IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 			return false;
+		}
+	}
+
+	public List<Post> getPosts(){
+		if(!connectToTCPIfNeeded() || user == null){
+			return null;
+		}
+
+		try {
+			ous.writeObject(new Command(Command.Operation.GetPosts, null));
+			return (List<Post>) ois.readObject();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public int createPost(String title, String text){
+		if(!connectToTCPIfNeeded() || user == null){
+			return -1;
+		}
+
+		try {
+			ous.writeObject(new Command(Command.Operation.PublishPost, new String[]{title, text}));
+			return (int) ois.readObject();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+			return -1;
+		}
+	}
+
+	public long getBalance(){
+		if(!connectToTCPIfNeeded() || user == null){
+			return -1;
+		}
+
+		try {
+			ous.writeObject(new Command(Command.Operation.GetBalance, null));
+			return (long) ois.readObject();
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+			return -1;
 		}
 	}
 }

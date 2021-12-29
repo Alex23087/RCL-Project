@@ -18,8 +18,6 @@ public class ServerMain {
 
     public static void main(String[] args) {
         Map<ConfigurationParameter, Object> conf = Utils.readConfFile("./conf.conf");
-        ServerData.users = new ConcurrentHashMap<>();
-        //TODO: read users from file
 
         Registry registry;
         try {

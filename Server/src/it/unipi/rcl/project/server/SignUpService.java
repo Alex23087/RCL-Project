@@ -29,8 +29,7 @@ public class SignUpService implements ISignUpService {
 			return ErrorMessage.InvalidTags;
 		}
 
-		users.put(username, new User(username, Utils.hashString(password), tags));
-		System.out.println("New user with username " + username + " successfully registered to the platform");
+		ServerData.addUser(username, password, tags);
 		return ErrorMessage.Success;
 	}
 
