@@ -42,12 +42,22 @@ public class ServerMain {
 
 
         ExecutorService pool = Executors.newCachedThreadPool();
+        ServerSocket socket;
         try {
-            ServerSocket socket = new ServerSocket((int) conf.get(ConfigurationParameter.TCPPORT));
-            Socket clientSocket = socket.accept();
-            pool.submit(new ClientHandler(clientSocket));
+            socket = new ServerSocket((int) conf.get(ConfigurationParameter.TCPPORT));
         } catch (IOException e) {
             e.printStackTrace();
+            return;
+        }
+
+        while(true){
+            Socket clientSocket = null;
+            try {
+                clientSocket = socket.accept();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            pool.submit(new ClientHandler(clientSocket));
         }
     }
 }

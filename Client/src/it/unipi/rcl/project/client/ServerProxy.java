@@ -17,53 +17,81 @@ public class ServerProxy{
 	private Socket socket;
 	private ObjectInputStream ois;
 	private ObjectOutputStream ous;
+	public String user = null;
 
-	private ServerProxy(){
-		System.out.println("a");
-		connectToServerRMI();
-		connectToServerTCP("localhost", 6666);
-	}
+	private ServerProxy(){}
 
-	private static void register(String username, String password, String[] tags, ISignUpService sus){
-		try {
-			System.out.println(sus.signUp(username, password, tags));
-		} catch (RemoteException e) {
-			e.printStackTrace();
+	private boolean connectToRMIIfNeeded(){
+		if(signUpService == null){
+			return connectToServerRMI();
+		}else{
+			return true;
 		}
 	}
 
-	private void connectToServerTCP(String address, int port){
+	private boolean connectToTCPIfNeeded(){
+		if(socket == null || !socket.isConnected()){
+			return connectToServerTCP("localhost", 6666);
+		}else{
+			return true;
+		}
+	}
+
+	private boolean connectToServerTCP(String address, int port){
 		try {
 			socket = new Socket(address, port);
 			ous = new ObjectOutputStream(socket.getOutputStream());
 			ois = new ObjectInputStream(socket.getInputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
+			return false;
 		}
 		System.out.println("Connected to server");
+		return true;
 	}
 
-	private void connectToServerRMI(){
+	private boolean connectToServerRMI(){
 		Registry registry;
 		try {
 			registry = LocateRegistry.getRegistry(Constants.registryPort);
 			signUpService = (ISignUpService) registry.lookup(Constants.signUpServiceName);
 		}catch(RemoteException | NotBoundException re){
 			re.printStackTrace();
+			return false;
 		}
-	}
-
-	public boolean register(String username, String password, String[] tags){
-		register(username, password, tags, signUpService);
+		System.out.println("Connected to RMI service");
 		return true;
 	}
 
+	public boolean register(String username, String password, String[] tags){
+		if(!connectToRMIIfNeeded()){
+			return false;
+		}
+		ErrorMessage em;
+		try {
+			em = signUpService.signUp(username, password, tags);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+			return false;
+		}
+		switch(em){
+			case Success:
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	public boolean login(String username, String password){
+		if(!connectToTCPIfNeeded()){
+			return false;
+		}
 		try {
 			ous.writeObject(new Command(Command.Operation.Login, new String[]{username, Utils.hashString(password)}));
 			ous.flush();
 			switch((ErrorMessage) ois.readObject()){
 				case Success:
+					user = username;
 					return true;
 				default:
 					return false;
