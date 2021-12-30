@@ -15,8 +15,27 @@ public class ClientMain {
 		AppEventDelegate aed = new AppEventDelegate() {
 			@Override
 			public void onLoginComplete() {
+				onFeedTransition();
+			}
+
+			@Override
+			public void onBlogTransition() {
+				transitionToForm(new BlogForm(this));
+			}
+
+			@Override
+			public void onFeedTransition() {
+				transitionToForm(new FeedForm(this));
+			}
+
+			@Override
+			public void onBalanceTransition() {
+
+			}
+
+			private void transitionToForm(Form form) {
 				appFrame.getContentPane().removeAll();
-				appFrame.getContentPane().add(new FeedForm().getPanel());
+				appFrame.getContentPane().add(form.getPanel());
 				appFrame.revalidate();
 				appFrame.repaint();
 			}

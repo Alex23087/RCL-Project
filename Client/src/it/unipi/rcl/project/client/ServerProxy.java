@@ -19,6 +19,7 @@ public class ServerProxy{
 	private ObjectInputStream ois;
 	private ObjectOutputStream ous;
 	public String user = null;
+	public long balance = -1;
 
 	private ServerProxy(){}
 
@@ -132,16 +133,24 @@ public class ServerProxy{
 	}
 
 	public long getBalance(){
-		if(!connectToTCPIfNeeded() || user == null){
-			return -1;
-		}
+		return getBalance(false);
+	}
 
-		try {
-			ous.writeObject(new Command(Command.Operation.GetBalance, null));
-			return (long) ois.readObject();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-			return -1;
+	public long getBalance(boolean forceUpdate){
+		if(forceUpdate || balance == -1) {
+			if (!connectToTCPIfNeeded() || user == null) {
+				return -1;
+			}
+
+			try {
+				ous.writeObject(new Command(Command.Operation.GetBalance, null));
+				return (long) ois.readObject();
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				return -1;
+			}
+		}else{
+			return balance;
 		}
 	}
 }

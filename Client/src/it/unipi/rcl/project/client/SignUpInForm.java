@@ -1,14 +1,8 @@
 package it.unipi.rcl.project.client;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.util.ResourceBundle;
 
-public class SignUpInForm extends JFrame{
+public class SignUpInForm extends Form{
 	private JButton registerButton;
 	private JButton loginButton;
 	private JPanel panel;
@@ -16,16 +10,12 @@ public class SignUpInForm extends JFrame{
 	private JPasswordField passwordTextField;
 	private JButton passHideButton;
 
-	private AppEventDelegate aed;
-
 	public SignUpInForm(AppEventDelegate aed){
-		ResourceBundle rb = ResourceBundle.getBundle("it/unipi/rcl/project/client/WinsomeStrings");
-
-		this.aed = aed;
+		super(aed);
 
 		loginButton.addActionListener(actionEvent -> {
 			if(ServerProxy.instance.login(usernameTextField.getText(), passwordTextField.getText())){
-				aed.onLoginComplete();
+				appEventDelegate.onLoginComplete();
 			}
 		});
 
@@ -43,43 +33,16 @@ public class SignUpInForm extends JFrame{
 			}
 			if(passwordTextField.getEchoChar() == (char) 0){
 				passwordTextField.setEchoChar('*');
-				passHideButton.setText(rb.getString("pass.show"));
+				passHideButton.setText(resourceBundle.getString("pass.show"));
 			}else{
 				passwordTextField.setEchoChar((char) 0);
-				passHideButton.setText(rb.getString("pass.hide"));
+				passHideButton.setText(resourceBundle.getString("pass.hide"));
 			}
 		});
 	}
 
+	@Override
 	public JPanel getPanel(){
 		return panel;
-	}
-
-	private static void setHint(JTextField textField, String hint){
-		textField.setText(hint);
-		if(textField instanceof JPasswordField){
-			((JPasswordField) textField).setEchoChar((char) 0);
-		}
-		textField.addFocusListener(new FocusAdapter() {
-			@Override
-			public void focusGained(FocusEvent e) {
-				if(textField.getText().equals(hint)){
-					textField.setText("");
-					if(textField instanceof JPasswordField){
-						((JPasswordField) textField).setEchoChar('*');
-					}
-				}
-			}
-
-			@Override
-			public void focusLost(FocusEvent e) {
-				if(textField.getText().equals("")){
-					textField.setText(hint);
-					if(textField instanceof JPasswordField){
-						((JPasswordField) textField).setEchoChar((char) 0);
-					}
-				}
-			}
-		});
 	}
 }
