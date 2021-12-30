@@ -1,5 +1,6 @@
 package it.unipi.rcl.project.server;
 
+import it.unipi.rcl.project.common.Pair;
 import it.unipi.rcl.project.common.Post;
 import it.unipi.rcl.project.common.Utils;
 
@@ -19,9 +20,8 @@ public class ServerData {
 		loadFromDisk();
 	}
 
-	public static List<User> getUsersWithTags(String[] tags){
-		//TODO: implement
-		return null;
+	public static List<Pair<String, String[]>> getUsersWithTags(String[] tags){
+		return users.values().stream().filter(user -> Arrays.stream(user.tags).anyMatch(t -> Arrays.asList(tags).contains(t))).map(user -> new Pair<>(user.username, user.tags)).collect(Collectors.toList());
 	}
 
 	public static void addUser(String username, String password, String[] tags){

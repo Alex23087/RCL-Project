@@ -5,7 +5,6 @@ import it.unipi.rcl.project.common.Post;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -18,29 +17,41 @@ public class FeedForm extends Form{
 	private JButton button4;
 	private JButton button5;
 	private JButton button6;
-	private JButton usernameButton;
+	private JButton profileButton;
 	private JButton balanceButton;
 	private JScrollPane feedPanel;
+	private JButton feedButton;
+	private JButton blogButton;
+	private JButton discoverButton;
 	private List<Post> posts;
 
 	public FeedForm(AppEventDelegate appEventDelegate){
 		super(appEventDelegate);
 
-		usernameButton.setText(ServerProxy.instance.user);
-		posts = ServerProxy.instance.getPosts();
+		ServerProxy.instance.getPosts(posts1 -> {
+			this.posts = posts1;
+			System.out.println(Arrays.toString(posts.stream().map(Post::toString).toArray()));
+		}, errorMessage -> {});
 
-		System.out.println(Arrays.toString(posts.stream().map(Post::toString).toArray()));
-		ServerProxy.instance.createPost("test", "text");
-		ServerProxy.instance.createPost("test", "text");
-		ServerProxy.instance.createPost("test", "text");
-		ServerProxy.instance.createPost("test", "text");
-		posts = ServerProxy.instance.getPosts();
+		ServerProxy.instance.createPost("test", "text", id -> {}, errorMessage -> {});
+		ServerProxy.instance.createPost("test", "text", id -> {}, errorMessage -> {});
+		ServerProxy.instance.createPost("test", "text", id -> {}, errorMessage -> {});
+		ServerProxy.instance.createPost("test", "text", id -> {}, errorMessage -> {});
+		ServerProxy.instance.getPosts(posts1 -> {
+			this.posts = posts1;
+			System.out.println(Arrays.toString(posts.stream().map(Post::toString).toArray()));
+		}, errorMessage -> {});
+
+
+
+		profileButton.setText(ServerProxy.instance.user);
 		updateBalanceLabel();
 
 
-		usernameButton.addActionListener(actionEvent -> {
+		blogButton.addActionListener(actionEvent -> appEventDelegate.onBlogTransition());
 
-		});
+		balanceButton.addActionListener(actionEvent -> appEventDelegate.onBalanceTransition());
+		discoverButton.addActionListener(actionEvent -> appEventDelegate.onDiscoverTransition());
 	}
 
 	@Override
@@ -49,7 +60,6 @@ public class FeedForm extends Form{
 	}
 
 	public void updateBalanceLabel(){
-		long balance = ServerProxy.instance.getBalance();
-		balanceButton.setText(balance + " WIN");
+		ServerProxy.instance.getBalance(balance -> balanceButton.setText(balance + " WIN"), errorMessage -> {});
 	}
 }

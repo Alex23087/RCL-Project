@@ -10,7 +10,9 @@ public class Command implements Serializable {
 		GetPosts,
 		PublishPost,
 		Rewin,
-		GetBalance
+		GetBalance,
+		GetBTCConversion,
+		ListUsers
 	}
 
 	public Operation op;

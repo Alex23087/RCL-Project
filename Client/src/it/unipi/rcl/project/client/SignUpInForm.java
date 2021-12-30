@@ -1,6 +1,9 @@
 package it.unipi.rcl.project.client;
 
+import it.unipi.rcl.project.common.ErrorMessage;
+
 import javax.swing.*;
+import java.awt.event.ActionListener;
 
 public class SignUpInForm extends Form{
 	private JButton registerButton;
@@ -13,14 +16,22 @@ public class SignUpInForm extends Form{
 	public SignUpInForm(AppEventDelegate aed){
 		super(aed);
 
-		loginButton.addActionListener(actionEvent -> {
-			if(ServerProxy.instance.login(usernameTextField.getText(), passwordTextField.getText())){
+		ActionListener loginListener = actionEvent -> {
+			ServerProxy.instance.login(usernameTextField.getText(), passwordTextField.getText(), () -> {
 				appEventDelegate.onLoginComplete();
-			}
-		});
+			}, errorMessage -> {
+
+			});
+		};
+
+		loginButton.addActionListener(loginListener);
 
 		registerButton.addActionListener(actionEvent -> {
-			ServerProxy.instance.register(usernameTextField.getText(), passwordTextField.getText(), new String[]{""});
+			ServerProxy.instance.register(usernameTextField.getText(), passwordTextField.getText(), new String[]{""}, () -> {
+				loginListener.actionPerformed(actionEvent);
+			}, errorMessage -> {
+
+			});
 		});
 
 		String passwordHint = "Password ";

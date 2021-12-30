@@ -1,6 +1,7 @@
 package it.unipi.rcl.project.client;
 
 import it.unipi.rcl.project.common.*;
+import it.unipi.rcl.project.common.Pair;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -11,6 +12,8 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ServerProxy{
 	public static ServerProxy instance = new ServerProxy();
@@ -21,7 +24,11 @@ public class ServerProxy{
 	public String user = null;
 	public long balance = -1;
 
-	private ServerProxy(){}
+	private ExecutorService pool;
+
+	private ServerProxy(){
+		pool = Executors.newFixedThreadPool(1);
+	}
 
 	private boolean connectToRMIIfNeeded(){
 		if(signUpService == null){
@@ -65,92 +72,155 @@ public class ServerProxy{
 		return true;
 	}
 
-	public boolean register(String username, String password, String[] tags){
-		if(!connectToRMIIfNeeded()){
-			return false;
-		}
-		ErrorMessage em;
-		try {
-			em = signUpService.signUp(username, password, tags);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-			return false;
-		}
-		switch(em){
-			case Success:
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	public boolean login(String username, String password){
-		if(!connectToTCPIfNeeded()){
-			return false;
-		}
-		try {
-			ous.writeObject(new Command(Command.Operation.Login, new String[]{username, Utils.hashString(password)}));
-			ous.flush();
-			switch((ErrorMessage) ois.readObject()){
-				case Success:
-					user = username;
-					return true;
-				default:
-					return false;
+	public void register(String username, String password, String[] tags, Runnable successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if(!connectToRMIIfNeeded()){
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
 			}
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-			return false;
-		}
+			ErrorMessage em;
+			try {
+				em = signUpService.signUp(username, password, tags);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			switch(em){
+				case Success:
+					successCallback.run();
+					return;
+				default:
+					errorCallback.run(em);
+					return;
+			}
+		});
 	}
 
-	public List<Post> getPosts(){
-		if(!connectToTCPIfNeeded() || user == null){
-			return null;
-		}
-
-		try {
-			ous.writeObject(new Command(Command.Operation.GetPosts, null));
-			return (List<Post>) ois.readObject();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-			return null;
-		}
+	public void login(String username, String password, Runnable successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if(!connectToTCPIfNeeded()){
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.Login, new String[]{username, Utils.hashString(password)}));
+				ous.flush();
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch(em){
+					case Success:
+						user = username;
+						successCallback.run();
+						return;
+					default:
+						errorCallback.run(em);
+						return;
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+		});
 	}
 
-	public int createPost(String title, String text){
-		if(!connectToTCPIfNeeded() || user == null){
-			return -1;
-		}
-
-		try {
-			ous.writeObject(new Command(Command.Operation.PublishPost, new String[]{title, text}));
-			return (int) ois.readObject();
-		} catch (IOException | ClassNotFoundException e) {
-			e.printStackTrace();
-			return -1;
-		}
-	}
-
-	public long getBalance(){
-		return getBalance(false);
-	}
-
-	public long getBalance(boolean forceUpdate){
-		if(forceUpdate || balance == -1) {
+	public void getPosts(Callback<List<Post>> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
-				return -1;
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
 			}
 
 			try {
-				ous.writeObject(new Command(Command.Operation.GetBalance, null));
-				return (long) ois.readObject();
+				ous.writeObject(new Command(Command.Operation.GetPosts, null));
+				successCallback.run((List<Post>) ois.readObject());
+				return;
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
-				return -1;
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
 			}
+		});
+	}
+
+	public void createPost(String title, String text, Callback<Integer> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try {
+				ous.writeObject(new Command(Command.Operation.PublishPost, new String[]{title, text}));
+				successCallback.run((int) ois.readObject());
+				return;
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+		});
+	}
+
+	public void getBalance(Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+		getBalance(false, successCallback, errorCallback);
+	}
+
+	public void getBalance(boolean forceUpdate, Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+		if(forceUpdate || balance == -1) {
+			pool.submit(() -> {
+				if (!connectToTCPIfNeeded() || user == null) {
+					errorCallback.run(ErrorMessage.UnknownError);
+					return;
+				}
+
+				try {
+					ous.writeObject(new Command(Command.Operation.GetBalance, null));
+					successCallback.run((long) ois.readObject());
+					return;
+				} catch (IOException | ClassNotFoundException e) {
+					e.printStackTrace();
+					errorCallback.run(ErrorMessage.UnknownError);
+					return;
+				}
+			});
 		}else{
-			return balance;
+			successCallback.run(balance);
 		}
+	}
+
+	public void getBTCBalance(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try {
+				ous.writeObject(new Command(Command.Operation.GetBTCConversion, null));
+				successCallback.run((double) ois.readObject());
+				return;
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+		});
+	}
+
+	public void listUsers(Callback<List<Pair<String, String[]>>> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			try {
+				ous.writeObject(new Command(Command.Operation.ListUsers, null));
+				successCallback.run((List<Pair<String, String[]>>) ois.readObject());
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public interface Callback<T> {
+		void run(T value);
 	}
 }

@@ -5,4 +5,5 @@ public interface AppEventDelegate {
 	void onBlogTransition();
 	void onFeedTransition();
 	void onBalanceTransition();
+	void onDiscoverTransition();
 }

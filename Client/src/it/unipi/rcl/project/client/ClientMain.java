@@ -30,10 +30,19 @@ public class ClientMain {
 
 			@Override
 			public void onBalanceTransition() {
+				transitionToForm(new BalanceForm(this));
+			}
 
+			@Override
+			public void onDiscoverTransition() {
+				transitionToForm(new DiscoverForm(this));
 			}
 
 			private void transitionToForm(Form form) {
+				if (!SwingUtilities.isEventDispatchThread()) {
+					SwingUtilities.invokeLater(() -> transitionToForm(form));
+					return;
+				}
 				appFrame.getContentPane().removeAll();
 				appFrame.getContentPane().add(form.getPanel());
 				appFrame.revalidate();

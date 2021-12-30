@@ -15,7 +15,7 @@ public class User implements Serializable {
 		this.username = username;
 		this.password = password;
 		this.tags = tags;
-		this.balance = 0;
+		this.balance = 428753;
 		this.id = getNewID();
 	}
 

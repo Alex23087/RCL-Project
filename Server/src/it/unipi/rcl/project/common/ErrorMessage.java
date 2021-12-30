@@ -8,5 +8,6 @@ public enum ErrorMessage {
 	InvalidTags,
 	UserAlreadyLoggedIn,
 	UserNotLoggedIn,
-	NoSuchUser
+	NoSuchUser,
+	UnknownError
 }

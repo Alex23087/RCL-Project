@@ -3,11 +3,12 @@ package it.unipi.rcl.project.server;
 import it.unipi.rcl.project.common.Command;
 import it.unipi.rcl.project.common.ErrorMessage;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Random;
 
 public class ClientHandler implements Runnable{
 	Socket client;
@@ -80,6 +81,14 @@ public class ClientHandler implements Runnable{
 					case GetBalance:
 						ous.writeObject(user.balance);
 						break;
+					case GetBTCConversion:
+						URL randomURL = new URL("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new");
+						URLConnection connection = randomURL.openConnection();
+						BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+						int factor = Integer.parseInt(in.readLine());
+						in.close();
+						ous.writeObject(user.balance / (double) factor);
+						break;
 					case PublishPost:
 						//TODO: error checking
 						int id = ServerData.addPost(user, cmd.parameters[0], cmd.parameters[1]);
@@ -88,6 +97,10 @@ public class ClientHandler implements Runnable{
 						break;
 					case Rewin:
 						id = ServerData.addRewin(user, Integer.parseInt(cmd.parameters[0]));
+						//TODO: Finish case
+						break;
+					case ListUsers:
+						ous.writeObject(ServerData.getUsersWithTags(user.tags));
 						break;
 					default:
 						break;
