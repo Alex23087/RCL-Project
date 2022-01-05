@@ -17,21 +17,41 @@ public class SignUpInForm extends Form{
 		super(aed);
 
 		ActionListener loginListener = actionEvent -> {
-			ServerProxy.instance.login(usernameTextField.getText(), passwordTextField.getText(), () -> {
-				appEventDelegate.onLoginComplete();
-			}, errorMessage -> {
-
+			//TODO: add client side checks
+			ServerProxy.instance.login(usernameTextField.getText().strip(), passwordTextField.getText().strip(), () -> appEventDelegate.onLoginComplete(), errorMessage -> {
+				switch(errorMessage){
+					case UserAlreadyLoggedIn:
+						new AlertForm("error", "user.already.logged","ok");
+						break;
+					case InvalidUsername:
+						new AlertForm("error", "user.invalid","ok");
+						break;
+					case InvalidPassword:
+						new AlertForm("error", "pass.invalid","ok");
+						break;
+				}
 			});
 		};
 
 		loginButton.addActionListener(loginListener);
 
 		registerButton.addActionListener(actionEvent -> {
-			ServerProxy.instance.register(usernameTextField.getText(), passwordTextField.getText(), new String[]{""}, () -> {
-				loginListener.actionPerformed(actionEvent);
-			}, errorMessage -> {
-
-			});
+			//TODO: add client side checks
+			new RegisterTagsForm(tags-> ServerProxy.instance.register(usernameTextField.getText().strip(), passwordTextField.getText().strip(), tags, () -> loginListener.actionPerformed(actionEvent), errorMessage -> {
+				switch(errorMessage){
+					case UserAlreadyExists:
+						new AlertForm("error", "user.exists", "ok");
+						break;
+					case InvalidTags:
+						new AlertForm("error", "tags.invalid", "ok");
+						break;
+					case InvalidPassword:
+						new AlertForm("error", "pass.invalid", "ok");
+						break;
+					case InvalidUsername:
+						new AlertForm("error", "user.invalid", "ok");
+				}
+			}));
 		});
 
 		String passwordHint = "Password ";

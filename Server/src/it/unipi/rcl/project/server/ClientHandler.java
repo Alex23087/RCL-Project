@@ -8,7 +8,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Random;
 
 public class ClientHandler implements Runnable{
 	Socket client;
@@ -41,8 +40,8 @@ public class ClientHandler implements Runnable{
 				}
 				switch (cmd.op) {
 					case Login:
-						if (user != null) {
-							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]User already logged in");
+						if (user != null || ServerData.loggedUsers.stream().anyMatch(us -> us.username.equals(cmd.parameters[0]))) {
+							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + cmd.parameters[0] + ")]User already logged in");
 							ous.writeObject(ErrorMessage.UserAlreadyLoggedIn);
 							ous.flush();
 						} else {
@@ -56,6 +55,7 @@ public class ClientHandler implements Runnable{
 								this.user = u;
 								ous.writeObject(ErrorMessage.Success);
 								ous.flush();
+								ServerData.loggedUsers.add(u);
 							} else {
 								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Invalid password");
 								ous.writeObject(ErrorMessage.InvalidPassword);
@@ -107,6 +107,7 @@ public class ClientHandler implements Runnable{
 				}
 			} catch (SocketException se){
 				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
+				ServerData.loggedUsers.remove(this.user);
 				break;
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();

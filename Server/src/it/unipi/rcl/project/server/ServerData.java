@@ -10,11 +10,13 @@ import java.util.stream.Collectors;
 
 public class ServerData {
 	static Map<String, User> users;
+	static List<User> loggedUsers;
 	static List<Post> posts;
 	static List<Pair<Integer, Integer>> follows; //First element is followerID, second element is followedID
 
 	static{
 		users = new ConcurrentHashMap<>();
+		loggedUsers = Collections.synchronizedList(new LinkedList<>());
 		posts = Collections.synchronizedList(new LinkedList<>());
 		follows = Collections.synchronizedList(new LinkedList<>());
 		loadFromDisk();

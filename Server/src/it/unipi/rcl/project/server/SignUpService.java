@@ -5,6 +5,7 @@ import it.unipi.rcl.project.common.ISignUpService;
 import it.unipi.rcl.project.common.Utils;
 
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Map;
 
 public class SignUpService implements ISignUpService {
@@ -17,19 +18,24 @@ public class SignUpService implements ISignUpService {
 	@Override
 	public ErrorMessage signUp(String username, String password, String[] tags) throws RemoteException {
 		if(users.containsKey(username)){
+			System.out.println("User tried to sign up with an already existing username: " + username);
 			return ErrorMessage.UserAlreadyExists;
 		}
 		if(!isUsernameValid(username)){
+			System.out.println("User tried to sign up with an invalid username: " + username);
 			return ErrorMessage.InvalidUsername;
 		}
 		if(!isPasswordValid(password)){
+			System.out.println("User tried to sign up with an invalid password: " + password);
 			return ErrorMessage.InvalidPassword;
 		}
 		if(!isTagArrayValid(tags)){
+			System.out.println("User tried to sign up with invalid tags: " + Arrays.toString(tags));
 			return ErrorMessage.InvalidTags;
 		}
 
 		ServerData.addUser(username, password, tags);
+		System.out.println("User " + username + " correctly registered");
 		return ErrorMessage.Success;
 	}
 

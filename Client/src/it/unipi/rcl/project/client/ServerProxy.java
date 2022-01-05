@@ -55,7 +55,7 @@ public class ServerProxy{
 			e.printStackTrace();
 			return false;
 		}
-		System.out.println("Connected to server");
+		System.out.println("Connected to server TCP");
 		return true;
 	}
 
