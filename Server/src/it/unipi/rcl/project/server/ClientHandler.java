@@ -102,6 +102,18 @@ public class ClientHandler implements Runnable{
 					case ListUsers:
 						ous.writeObject(ServerData.getUsersWithTags(user.tags));
 						break;
+					case Follow:
+						int followedId = ServerData.getUserId(cmd.parameters[1]);
+						if(followedId != -1) {
+							if(ServerData.follow(user.id, followedId)) {
+								ous.writeObject(ErrorMessage.Success);
+							}else{
+								ous.writeObject(ErrorMessage.AlreadyFollowed);
+							}
+						}else{
+							ous.writeObject(ErrorMessage.InvalidUsername);
+						}
+						break;
 					default:
 						break;
 				}

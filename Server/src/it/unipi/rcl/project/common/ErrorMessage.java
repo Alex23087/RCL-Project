@@ -9,5 +9,6 @@ public enum ErrorMessage {
 	UserAlreadyLoggedIn,
 	UserNotLoggedIn,
 	NoSuchUser,
-	UnknownError
+	UnknownError,
+	AlreadyFollowed
 }

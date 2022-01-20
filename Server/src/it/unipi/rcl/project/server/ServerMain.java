@@ -10,7 +10,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -47,6 +46,8 @@ public class ServerMain {
             e.printStackTrace();
             return;
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(ServerData::saveToDisk));
 
         while(true){
             Socket clientSocket = null;

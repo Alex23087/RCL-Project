@@ -220,6 +220,25 @@ public class ServerProxy{
 		});
 	}
 
+	public void follow(String username, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			try{
+				ous.writeObject(new Command(Command.Operation.Follow, new String[]{username}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+				}
+			}catch (IOException | ClassNotFoundException ioe){
+				ioe.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
 	public interface Callback<T> {
 		void run(T value);
 	}

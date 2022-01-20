@@ -11,5 +11,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="src" level="project" />
+    <orderEntry type="library" name="google.code.gson" level="application" />
   </component>
 </module>
