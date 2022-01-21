@@ -13,7 +13,9 @@ public class Command implements Serializable {
 		GetBalance,
 		GetBTCConversion,
 		ListUsers,
-		Follow
+		Follow,
+		GetFollowers,
+		GetFollowed
 	}
 
 	public Operation op;

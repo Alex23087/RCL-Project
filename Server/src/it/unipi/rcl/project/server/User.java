@@ -3,7 +3,7 @@ package it.unipi.rcl.project.server;
 import java.io.Serializable;
 
 public class User implements Serializable {
-	private static int lastIDAssigned = 0;
+	public static int lastIDAssigned = 0;
 
 	public int id;
 	public String username;

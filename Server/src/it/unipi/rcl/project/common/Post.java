@@ -5,7 +5,7 @@ import it.unipi.rcl.project.server.User;
 import java.io.Serializable;
 
 public class Post implements Serializable {
-	private static int lastIDAssigned = 0;
+	public static int lastIDAssigned = 0;
 
 	public int id;
 	public int authorId;

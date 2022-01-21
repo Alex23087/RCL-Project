@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.List;
 
 public class ClientHandler implements Runnable{
 	Socket client;
@@ -103,7 +104,7 @@ public class ClientHandler implements Runnable{
 						ous.writeObject(ServerData.getUsersWithTags(user.tags));
 						break;
 					case Follow:
-						int followedId = ServerData.getUserId(cmd.parameters[1]);
+						int followedId = ServerData.getUserId(cmd.parameters[0]);
 						if(followedId != -1) {
 							if(ServerData.follow(user.id, followedId)) {
 								ous.writeObject(ErrorMessage.Success);
@@ -113,6 +114,10 @@ public class ClientHandler implements Runnable{
 						}else{
 							ous.writeObject(ErrorMessage.InvalidUsername);
 						}
+						break;
+					case GetFollowed:
+						List<String> l = ServerData.getFollowed(user.id);
+						ous.writeObject(l);
 						break;
 					default:
 						break;

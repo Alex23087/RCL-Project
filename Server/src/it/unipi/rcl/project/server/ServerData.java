@@ -2,6 +2,7 @@ package it.unipi.rcl.project.server;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import it.unipi.rcl.project.common.Pair;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ServerData {
 	static Map<String, User> users;
@@ -75,18 +77,30 @@ public class ServerData {
 	}
 
 	public static boolean follow(int follower, int followed){
-		Pair<Integer, Integer> f = new Pair<>(follower, followed);
-		if(follows.contains(f)){
+		if(follows.stream().anyMatch(f -> f.first == follower && f.second == followed)){
 			return false;
 		}else{
-			follows.add(f);
+			follows.add(new Pair<>(follower, followed));
 			return true;
 		}
+	}
+
+	public static List<String> getFollowed(int userId){
+		/*List<String> followed = new ArrayList<>();
+		for(Pair<Integer, Integer> f: follows){
+			if(f.first != userId){
+				continue;
+			}
+			followed.add(getUser(f.second).username);
+		}
+		return followed;*/
+		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).username).collect(Collectors.toList());
 	}
 
 	public static void saveToDisk(){
 		saveUsers();
 		saveFollows();
+		savePosts();
 	}
 
 	private static void saveUsers(){
@@ -101,10 +115,13 @@ public class ServerData {
 			JsonWriter writer = new JsonWriter(new OutputStreamWriter(new FileOutputStream(pathname)));
 			writer.setIndent("\t");
 			writer.beginArray();
+			writer.beginArray();
 			String[] usernames = users.keySet().toArray(new String[]{});
 			for(int i = 0; i < usernames.length; i++) {
 				gson.toJson(users.get(usernames[i]), User.class, writer);
 			}
+			writer.endArray();
+			gson.toJson(User.lastIDAssigned, Integer.class, writer);
 			writer.endArray();
 			writer.close();
 		} catch (IOException e) {
@@ -114,7 +131,6 @@ public class ServerData {
 	}
 
 	private static void saveFollows(){
-
 		System.out.println("Writing follows to disk...");
 		String pathname = "./follows.json";
 		Path path = Paths.get(pathname);
@@ -137,9 +153,36 @@ public class ServerData {
 		System.out.println("Follows written to disk");
 	}
 
+	private static void savePosts(){
+		System.out.println("Writing posts to disk...");
+		String pathname = "./posts.json";
+		Path path = Paths.get(pathname);
+		try {
+			try {
+				Files.createFile(path);
+			} catch (FileAlreadyExistsException ignored) {}
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			JsonWriter writer = new JsonWriter(new OutputStreamWriter(new FileOutputStream(pathname)));
+			writer.setIndent("\t");
+			writer.beginArray();
+			writer.beginArray();
+			for(int i = 0; i < posts.size(); i++) {
+				gson.toJson(posts.get(i), Post.class, writer);
+			}
+			writer.endArray();
+			gson.toJson(Post.lastIDAssigned, Integer.class, writer);
+			writer.endArray();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Posts written to disk");
+	}
+
 	private static void loadFromDisk(){
 		loadUsers();
-		//TODO: read users and posts from file
+		loadFollows();
+		loadPosts();
 	}
 
 	private static void loadUsers(){
@@ -147,15 +190,55 @@ public class ServerData {
 		String pathname = "./users.json";
 		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
 			reader.beginArray();
+			reader.beginArray();
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			while(reader.hasNext()){
 				User user = gson.fromJson(reader, User.class);
 				users.put(user.username, user);
 			}
 			reader.endArray();
+			User.lastIDAssigned = gson.fromJson(reader, Integer.class);
+			reader.endArray();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		System.out.println("Users loaded");
+	}
+
+	private static void loadFollows(){
+		System.out.println("Loading follows from disk...");
+		String pathname = "./follows.json";
+		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
+			reader.beginArray();
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			while(reader.hasNext()){
+				Pair<Integer, Integer> follow = gson.fromJson(reader, new TypeToken<Pair<Integer, Integer>>(){}.getType());
+				follows.add(follow);
+			}
+			reader.endArray();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Follows loaded");
+	}
+
+	private static void loadPosts(){
+		System.out.println("Loading posts from disk...");
+		String pathname = "./posts.json";
+		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
+			reader.beginArray();
+			reader.beginArray();
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+			while(reader.hasNext()){
+				Post post = gson.fromJson(reader, Post.class);
+				posts.add(post);
+			}
+			reader.endArray();
+			Post.lastIDAssigned = gson.fromJson(reader, Integer.class);
+			reader.endArray();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Posts loaded");
 	}
 }

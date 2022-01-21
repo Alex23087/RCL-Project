@@ -11,6 +11,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,11 +25,13 @@ public class ServerProxy{
 	private ObjectOutputStream ous;
 	public String user = null;
 	public long balance = -1;
+	public List<String> followed;
 
 	private ExecutorService pool;
 
 	private ServerProxy(){
 		pool = Executors.newFixedThreadPool(1);
+		followed = Collections.synchronizedList(new LinkedList<>());
 	}
 
 	private boolean connectToRMIIfNeeded(){
@@ -210,6 +214,11 @@ public class ServerProxy{
 
 	public void listUsers(Callback<List<Pair<String, String[]>>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
 			try {
 				ous.writeObject(new Command(Command.Operation.ListUsers, null));
 				successCallback.run((List<Pair<String, String[]>>) ois.readObject());
@@ -222,15 +231,67 @@ public class ServerProxy{
 
 	public void follow(String username, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
 			try{
 				ous.writeObject(new Command(Command.Operation.Follow, new String[]{username}));
 				ErrorMessage em = (ErrorMessage) ois.readObject();
 				switch (em){
 					case Success:
+						followed.add(username);
 						successCallback.run();
 						break;
 					default:
 						errorMessageCallback.run(em);
+				}
+			}catch (IOException | ClassNotFoundException ioe){
+				ioe.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public void getFollowers(Callback<List<String>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try{
+				ous.writeObject(new Command(Command.Operation.GetFollowers, new String[]{}));
+				Object response = ois.readObject();
+				if(response instanceof ErrorMessage){
+					errorMessageCallback.run((ErrorMessage) response);
+				}else{
+					followed = (List<String>) response;
+					successCallback.run(followed);
+				}
+			}catch (IOException | ClassNotFoundException ioe){
+				ioe.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public void getFollowed(Callback<List<String>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try{
+				ous.writeObject(new Command(Command.Operation.GetFollowed, new String[]{}));
+				Object response = ois.readObject();
+				if(response instanceof ErrorMessage){
+					errorMessageCallback.run((ErrorMessage) response);
+				}else{
+					followed = (List<String>) response;
+					successCallback.run(followed);
 				}
 			}catch (IOException | ClassNotFoundException ioe){
 				ioe.printStackTrace();

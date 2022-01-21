@@ -33,9 +33,6 @@ public class DiscoverForm extends Form{
 					continue;
 				}
 				contents.add(new UserPanel(u));
-				contents.add(new UserPanel(u));
-				contents.add(new UserPanel(u));
-				contents.add(new UserPanel(u));
 			}
 			scrollPane.getViewport().add(contents);
 		}, errorMessage -> {});
@@ -57,7 +54,7 @@ public class DiscoverForm extends Form{
 		return panel;
 	}
 
-	private class UserPanel extends JPanel{
+	private static class UserPanel extends JPanel{
 		public UserPanel(Pair<String, String[]> user){
 			super();
 			setLayout(new FlowLayout());
@@ -74,15 +71,30 @@ public class DiscoverForm extends Form{
 			}
 			add(tags);
 
-			JButton followButton = new JButton(resourceBundle.getString("follow"));
-			followButton.addActionListener(actionEvent -> {
+			JButton followButton = new JButton();
+			if(ServerProxy.instance.followed.contains(user.first)){
+				followButton.setText(resourceBundle.getString("following"));
 				followButton.setEnabled(false);
-				ServerProxy.instance.follow(user.first, () -> {
-					
-				}, errorMessage -> {
-
+				//TODO: maybe add unfollow button
+			}else {
+				followButton.setText(resourceBundle.getString("follow"));
+				followButton.addActionListener(actionEvent -> {
+					followButton.setEnabled(false);
+					ServerProxy.instance.follow(user.first, () -> {
+						followButton.setText(resourceBundle.getString("following"));
+					}, errorMessage -> {
+						switch (errorMessage) {
+							case AlreadyFollowed:
+								new AlertForm("error", "error.already.followed", "ok");
+								break;
+							case InvalidUsername:
+								new AlertForm("error", "user.invalid", "ok");
+								break;
+						}
+						followButton.setEnabled(true);
+					});
 				});
-			});
+			}
 			add(followButton);
 		}
 	}

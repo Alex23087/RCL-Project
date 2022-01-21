@@ -15,6 +15,7 @@ public class ClientMain {
 		AppEventDelegate aed = new AppEventDelegate() {
 			@Override
 			public void onLoginComplete() {
+				ServerProxy.instance.getFollowed(f -> {}, em -> {});
 				onFeedTransition();
 			}
 
