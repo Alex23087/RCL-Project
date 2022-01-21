@@ -1,6 +1,7 @@
 package it.unipi.rcl.project.client;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.ResourceBundle;
@@ -42,4 +43,9 @@ public abstract class Form {
 	}
 
 	public abstract JPanel getPanel();
+
+	public static void centerFrame(JFrame frame){
+		Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
+		frame.setLocation((int) (dimension.getWidth() / 2 - frame.getSize().getWidth() / 2), (int) (dimension.getHeight() / 2 - frame.getSize().getHeight() / 2));
+	}
 }

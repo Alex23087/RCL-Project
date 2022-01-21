@@ -1,13 +1,12 @@
 package it.unipi.rcl.project.client;
 
 import it.unipi.rcl.project.common.Pair;
-import it.unipi.rcl.project.server.User;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
 
-public class DiscoverForm extends Form{
+public class DiscoverForm extends WinsomeForm{
 	private JPanel panel;
 	private JButton profileButton;
 	private JButton balanceButton;
@@ -18,11 +17,6 @@ public class DiscoverForm extends Form{
 
 	DiscoverForm(AppEventDelegate aed) {
 		super(aed);
-
-		profileButton.setText(ServerProxy.instance.user);
-		ServerProxy.instance.getBalance(balance -> balanceButton.setText(balance + " WIN"), errorMessage -> {});
-		feedButton.addActionListener(actionEvent -> appEventDelegate.onFeedTransition());
-		balanceButton.addActionListener(actionEvent -> appEventDelegate.onBalanceTransition());
 
 		ServerProxy.instance.listUsers(users -> {
 			System.out.println(Arrays.toString(users.stream().map(Pair::toString).toArray()));
@@ -37,6 +31,7 @@ public class DiscoverForm extends Form{
 			scrollPane.getViewport().add(contents);
 		}, errorMessage -> {});
 
+		init();
 	}
 
 	private void updatePane(){
@@ -52,6 +47,31 @@ public class DiscoverForm extends Form{
 	@Override
 	public JPanel getPanel() {
 		return panel;
+	}
+
+	@Override
+	protected JButton getBalanceButton() {
+		return balanceButton;
+	}
+
+	@Override
+	protected JButton getBlogButton() {
+		return blogButton;
+	}
+
+	@Override
+	protected JButton getDiscoverButton() {
+		return discoverButton;
+	}
+
+	@Override
+	protected JButton getFeedButton() {
+		return feedButton;
+	}
+
+	@Override
+	protected JButton getProfileButton() {
+		return profileButton;
 	}
 
 	private static class UserPanel extends JPanel{

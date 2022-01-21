@@ -1,8 +1,6 @@
 package it.unipi.rcl.project.client;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class AlertForm extends Form{
 	private JPanel panel;
@@ -21,6 +19,7 @@ public class AlertForm extends Form{
 		okButton.setText(resourceBundle.getString(button));
 
 		okButton.addActionListener(actionEvent -> frame.dispose());
+		Form.centerFrame(frame);
 	}
 
 	@Override

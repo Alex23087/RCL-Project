@@ -15,7 +15,9 @@ public class Command implements Serializable {
 		ListUsers,
 		Follow,
 		GetFollowers,
-		GetFollowed
+		GetFollowed,
+		GetUsernameFromId,
+		GetPostFromId
 	}
 
 	public Operation op;

@@ -1,7 +1,5 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.common.ErrorMessage;
-
 import javax.swing.*;
 import java.awt.event.ActionListener;
 

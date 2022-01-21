@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class BalanceForm extends Form{
+public class BalanceForm extends WinsomeForm{
 	private JPanel panel;
 	private JButton profileButton;
 	private JButton balanceButton;
@@ -20,9 +20,32 @@ public class BalanceForm extends Form{
 		ServerProxy.instance.getBalance(balance -> balanceLabel.setText(balance + " WIN"), errorMessage -> {});
 		ServerProxy.instance.getBTCBalance(btcBalance -> btcLabel.setText(btcBalance + " BTC"), errorMessage -> {});
 
-		profileButton.setText(ServerProxy.instance.user);
-		feedButton.addActionListener(actionEvent -> appEventDelegate.onFeedTransition());
-		discoverButton.addActionListener(actionEvent -> appEventDelegate.onDiscoverTransition());
+		init();
+	}
+
+	@Override
+	protected JButton getBalanceButton() {
+		return balanceButton;
+	}
+
+	@Override
+	protected JButton getBlogButton() {
+		return blogButton;
+	}
+
+	@Override
+	protected JButton getDiscoverButton() {
+		return discoverButton;
+	}
+
+	@Override
+	protected JButton getFeedButton() {
+		return feedButton;
+	}
+
+	@Override
+	protected JButton getProfileButton() {
+		return profileButton;
 	}
 
 	@Override

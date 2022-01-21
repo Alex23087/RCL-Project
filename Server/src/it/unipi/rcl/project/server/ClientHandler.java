@@ -2,6 +2,7 @@ package it.unipi.rcl.project.server;
 
 import it.unipi.rcl.project.common.Command;
 import it.unipi.rcl.project.common.ErrorMessage;
+import it.unipi.rcl.project.common.Post;
 
 import java.io.*;
 import java.net.Socket;
@@ -119,7 +120,34 @@ public class ClientHandler implements Runnable{
 						List<String> l = ServerData.getFollowed(user.id);
 						ous.writeObject(l);
 						break;
+					case GetUsernameFromId:
+						try{
+							int userID = Integer.parseInt(cmd.parameters[0]);
+							User u = ServerData.getUser(userID);
+							if(u == null){
+								ous.writeObject(ErrorMessage.InvalidUsername);
+							}else{
+								ous.writeObject(u.username);
+							}
+						}catch (NumberFormatException nfe){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						}
+						break;
+					case GetPostFromId:
+						try{
+							int postID = Integer.parseInt(cmd.parameters[0]);
+							Post p = ServerData.getPostWithId(postID);
+							if(p == null){
+								ous.writeObject(ErrorMessage.InvalidPostId);
+							}else{
+								ous.writeObject(p);
+							}
+						}catch (NumberFormatException nfe){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						}
+						break;
 					default:
+						ous.writeObject(ErrorMessage.InvalidCommand);
 						break;
 				}
 			} catch (SocketException se){

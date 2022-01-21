@@ -3,15 +3,10 @@ package it.unipi.rcl.project.client;
 import it.unipi.rcl.project.common.Post;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.Arrays;
 import java.util.List;
 
-public class FeedForm extends Form{
+public class FeedForm extends WinsomeForm{
 	private JPanel panel;
-	private JLabel usernameLabel;
 	private JButton profileButton;
 	private JButton balanceButton;
 	private JButton feedButton;
@@ -23,26 +18,12 @@ public class FeedForm extends Form{
 	public FeedForm(AppEventDelegate appEventDelegate){
 		super(appEventDelegate);
 
-		ServerProxy.instance.getPosts(posts1 -> {
-			this.posts = posts1;
-			JPanel contents = new JPanel();
-			contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
-			for (Post p: posts) {
-				contents.add(new FeedPostForm(p).panel);
-			}
-			feedPane.setViewportView(contents);
+		ServerProxy.instance.getFeed(posts -> {
+			this.posts = posts;
+			feedPane.setViewportView(makePanelWithPosts(posts));
 		}, errorMessage -> {});
 
-
-
-		profileButton.setText(ServerProxy.instance.user);
-		updateBalanceLabel();
-
-
-		blogButton.addActionListener(actionEvent -> appEventDelegate.onBlogTransition());
-
-		balanceButton.addActionListener(actionEvent -> appEventDelegate.onBalanceTransition());
-		discoverButton.addActionListener(actionEvent -> appEventDelegate.onDiscoverTransition());
+		init();
 	}
 
 	@Override
@@ -50,18 +31,28 @@ public class FeedForm extends Form{
 		return panel;
 	}
 
-	public void updateBalanceLabel(){
-		ServerProxy.instance.getBalance(balance -> balanceButton.setText(balance + " WIN"), errorMessage -> {});
+	@Override
+	protected JButton getBalanceButton() {
+		return balanceButton;
 	}
 
-	private static class PostPanel extends JPanel{
-		public PostPanel(Post post){
-			super();
-			setLayout(new FlowLayout());
-			JLabel postTitleLabel = new JLabel(post.title);
-			JLabel postTextLabel = new JLabel(post.text);
-			add(postTitleLabel);
-			add(postTextLabel);
-		}
+	@Override
+	protected JButton getBlogButton() {
+		return blogButton;
+	}
+
+	@Override
+	protected JButton getDiscoverButton() {
+		return discoverButton;
+	}
+
+	@Override
+	protected JButton getFeedButton() {
+		return feedButton;
+	}
+
+	@Override
+	protected JButton getProfileButton() {
+		return profileButton;
 	}
 }

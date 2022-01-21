@@ -11,9 +11,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,12 +24,14 @@ public class ServerProxy{
 	public String user = null;
 	public long balance = -1;
 	public List<String> followed;
+	private Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 
 	private ExecutorService pool;
 
 	private ServerProxy(){
 		pool = Executors.newFixedThreadPool(1);
 		followed = Collections.synchronizedList(new LinkedList<>());
+		usernames = new HashMap<>();
 	}
 
 	private boolean connectToRMIIfNeeded(){
@@ -137,6 +137,25 @@ public class ServerProxy{
 
 			try {
 				ous.writeObject(new Command(Command.Operation.GetPosts, null));
+				successCallback.run((List<Post>) ois.readObject());
+				return;
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+		});
+	}
+
+	public void getFeed(Callback<List<Post>> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try {
+				ous.writeObject(new Command(Command.Operation.GetFeed, null));
 				successCallback.run((List<Post>) ois.readObject());
 				return;
 			} catch (IOException | ClassNotFoundException e) {
@@ -262,7 +281,7 @@ public class ServerProxy{
 			}
 
 			try{
-				ous.writeObject(new Command(Command.Operation.GetFollowers, new String[]{}));
+				ous.writeObject(new Command(Command.Operation.GetFollowers, null));
 				Object response = ois.readObject();
 				if(response instanceof ErrorMessage){
 					errorMessageCallback.run((ErrorMessage) response);
@@ -285,7 +304,7 @@ public class ServerProxy{
 			}
 
 			try{
-				ous.writeObject(new Command(Command.Operation.GetFollowed, new String[]{}));
+				ous.writeObject(new Command(Command.Operation.GetFollowed, null));
 				Object response = ois.readObject();
 				if(response instanceof ErrorMessage){
 					errorMessageCallback.run((ErrorMessage) response);
@@ -295,6 +314,55 @@ public class ServerProxy{
 				}
 			}catch (IOException | ClassNotFoundException ioe){
 				ioe.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public void getUsernameFromId(Integer userID, Callback<String> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			if(usernames.containsKey(userID)){
+				successCallback.run(usernames.get(userID));
+			}else{
+				try {
+					ous.writeObject(new Command(Command.Operation.GetUsernameFromId, new String[]{userID.toString()}));
+					Object response = ois.readObject();
+					if(response instanceof String){
+						String username = (String) response;
+						usernames.put(userID, username);
+						successCallback.run(username);
+					}else{
+						errorMessageCallback.run((ErrorMessage) response);
+					}
+				} catch (IOException | ClassNotFoundException e) {
+					e.printStackTrace();
+					errorMessageCallback.run(ErrorMessage.UnknownError);
+				}
+			}
+		});
+	}
+
+	public void getPostFromId(Integer postID, Callback<Post> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.GetPostFromId, new String[]{postID.toString()}));
+				Object response = ois.readObject();
+				if(response instanceof Post){
+					successCallback.run((Post) response);
+				}else{
+					errorMessageCallback.run((ErrorMessage) response);
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
 			}
 		});

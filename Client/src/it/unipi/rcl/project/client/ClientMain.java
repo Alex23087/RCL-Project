@@ -9,10 +9,18 @@ public class ClientMain {
 	    JFrame appFrame = new JFrame();
 	    appFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	    appFrame.setVisible(true);
-	    appFrame.setSize(500, 500);
+	    appFrame.setSize(800, 600);
 	    appFrame.setTitle("Winsome");
+		Form.centerFrame(appFrame);
 
-		AppEventDelegate aed = new AppEventDelegate() {
+	    try {
+		    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+	    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
+		    e.printStackTrace();
+	    }
+
+
+	    AppEventDelegate aed = new AppEventDelegate() {
 			@Override
 			public void onLoginComplete() {
 				ServerProxy.instance.getFollowed(f -> {}, em -> {});

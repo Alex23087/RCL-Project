@@ -17,7 +17,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ServerData {
 	static Map<String, User> users;
@@ -96,6 +95,12 @@ public class ServerData {
 		return followed;*/
 		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).username).collect(Collectors.toList());
 	}
+
+	public static Post getPostWithId(int postId){
+		return posts.stream().filter(p -> p.id == postId).findFirst().orElse(null);
+	}
+
+
 
 	public static void saveToDisk(){
 		saveUsers();

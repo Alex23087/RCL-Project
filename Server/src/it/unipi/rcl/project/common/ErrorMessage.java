@@ -10,5 +10,7 @@ public enum ErrorMessage {
 	UserNotLoggedIn,
 	NoSuchUser,
 	UnknownError,
-	AlreadyFollowed
+	AlreadyFollowed,
+	InvalidCommand,
+	InvalidPostId
 }
