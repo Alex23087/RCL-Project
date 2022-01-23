@@ -12,14 +12,14 @@ public class Command implements Serializable {
 		GetFeed,
 		GetFollowed,
 		GetFollowers,
-		GetPostFromId,
 		GetPosts,
+		GetPostViewFromId,
 		GetUsernameFromId,
 		ListUsers,
 		PublishPost,
 		Rewin,
-		ShowPost,
-		Unfollow
+		Unfollow,
+		Vote
 	}
 
 	public Operation op;

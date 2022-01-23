@@ -1,6 +1,6 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.common.Post;
+import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
 import java.util.List;
@@ -12,6 +12,9 @@ public abstract class WinsomeForm extends Form{
 	}
 
 	protected final void init(){
+		getFeedButton().setText(resourceBundle.getString("feed"));
+		getDiscoverButton().setText(resourceBundle.getString("discover"));
+		getBlogButton().setText(resourceBundle.getString("blog"));
 		getBalanceButton().addActionListener(actionEvent -> appEventDelegate.onBalanceTransition());
 		getBlogButton().addActionListener(actionEvent -> appEventDelegate.onBlogTransition());
 		getDiscoverButton().addActionListener(actionEvent -> appEventDelegate.onDiscoverTransition());
@@ -28,11 +31,11 @@ public abstract class WinsomeForm extends Form{
 	protected abstract JButton getFeedButton();
 	protected abstract JButton getProfileButton();
 
-	protected final JPanel makePanelWithPosts(List<Post> posts){
+	protected final JPanel makePanelWithPostViews(List<PostViewShort> posts, boolean isBlog){
 		JPanel contents = new JPanel();
 		contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
-		for (Post p: posts) {
-			contents.add(new FeedPostForm(p).panel);
+		for (PostViewShort p: posts) {
+			contents.add(new FeedPostForm(appEventDelegate, p, isBlog).panel);
 		}
 		return contents;
 	}

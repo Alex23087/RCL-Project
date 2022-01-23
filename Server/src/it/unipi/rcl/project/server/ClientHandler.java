@@ -3,6 +3,7 @@ package it.unipi.rcl.project.server;
 import it.unipi.rcl.project.common.Command;
 import it.unipi.rcl.project.common.ErrorMessage;
 import it.unipi.rcl.project.common.Post;
+import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
 import java.net.Socket;
@@ -145,10 +146,10 @@ public class ClientHandler implements Runnable{
 						}
 						break;
 					}
-					case GetPostFromId: {
+					case GetPostViewFromId: {
 						try {
 							int postID = Integer.parseInt(cmd.parameters[0]);
-							Post p = ServerData.getPostWithId(postID);
+							PostView p = ServerData.getPostViewWithId(postID, user.id);
 							if (p == null) {
 								ous.writeObject(ErrorMessage.InvalidPostId);
 							} else {
@@ -173,8 +174,18 @@ public class ClientHandler implements Runnable{
 						}
 						break;
 					}
-					case ShowPost:{
-						ServerData.showPost
+					case Vote:{
+						if(cmd.parameters == null || cmd.parameters.length < 2){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						}else {
+							try {
+								int postId = Integer.parseInt(cmd.parameters[0]);
+								boolean upvote = Boolean.parseBoolean(cmd.parameters[1]);
+								ous.writeObject(ServerData.vote(postId, user.id, upvote));
+							}catch (NumberFormatException nfe){
+								ous.writeObject(ErrorMessage.InvalidCommand);
+							}
+						}
 						break;
 					}
 					default: {

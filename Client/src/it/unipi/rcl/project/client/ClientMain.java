@@ -1,5 +1,7 @@
 package it.unipi.rcl.project.client;
 
+import it.unipi.rcl.project.common.PostViewShort;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -21,7 +23,12 @@ public class ClientMain {
 
 
 	    AppEventDelegate aed = new AppEventDelegate() {
-			@Override
+		    @Override
+		    public int getFrameWidth() {
+			    return appFrame.getWidth();
+		    }
+
+		    @Override
 			public void onLoginComplete() {
 				ServerProxy.instance.getFollowed(f -> {}, em -> {});
 				onFeedTransition();
@@ -47,7 +54,12 @@ public class ClientMain {
 				transitionToForm(new DiscoverForm(this));
 			}
 
-			private void transitionToForm(Form form) {
+		    @Override
+		    public void onPostViewTransition(PostViewShort postViewShort, boolean comingFromBlog) {
+			    transitionToForm(new PostViewForm(this, postViewShort, comingFromBlog));
+		    }
+
+		    private void transitionToForm(Form form) {
 				if (!SwingUtilities.isEventDispatchThread()) {
 					SwingUtilities.invokeLater(() -> transitionToForm(form));
 					return;

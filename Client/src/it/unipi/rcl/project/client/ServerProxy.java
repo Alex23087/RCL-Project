@@ -127,7 +127,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getPosts(Callback<List<Post>> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getPosts(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -136,7 +136,7 @@ public class ServerProxy{
 
 			try {
 				ous.writeObject(new Command(Command.Operation.GetPosts, null));
-				successCallback.run((List<Post>) ois.readObject());
+				successCallback.run((List<PostViewShort>) ois.readObject());
 				return;
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
@@ -146,7 +146,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFeed(Callback<List<Post>> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getFeed(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -155,7 +155,7 @@ public class ServerProxy{
 
 			try {
 				ous.writeObject(new Command(Command.Operation.GetFeed, null));
-				successCallback.run((List<Post>) ois.readObject());
+				successCallback.run((List<PostViewShort>) ois.readObject());
 				return;
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
@@ -371,17 +371,17 @@ public class ServerProxy{
 		});
 	}
 
-	public void getPostFromId(Integer postID, Callback<Post> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void getPostViewFromId(Integer postID, Callback<PostView> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
 				return;
 			}
 			try {
-				ous.writeObject(new Command(Command.Operation.GetPostFromId, new String[]{postID.toString()}));
+				ous.writeObject(new Command(Command.Operation.GetPostViewFromId, new String[]{postID.toString()}));
 				Object response = ois.readObject();
-				if(response instanceof Post){
-					successCallback.run((Post) response);
+				if(response instanceof PostView){
+					successCallback.run((PostView) response);
 				}else{
 					errorMessageCallback.run((ErrorMessage) response);
 				}
@@ -392,7 +392,31 @@ public class ServerProxy{
 		});
 	}
 
-	public interface Callback<T> {
+	public void vote(Integer postID, Boolean upvote, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.Vote, new String[]{postID.toString(), upvote.toString()}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+						break;
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+		public interface Callback<T> {
 		void run(T value);
 	}
 }

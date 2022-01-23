@@ -2,6 +2,7 @@ package it.unipi.rcl.project.common;
 
 public enum ErrorMessage {
 	AlreadyFollowed,
+	AlreadyVoted,
 	InvalidCommand,
 	InvalidPassword,
 	InvalidPostId,
@@ -14,5 +15,6 @@ public enum ErrorMessage {
 	UserAlreadyExists,
 	UserAlreadyLoggedIn,
 	UserNotLoggedIn,
-	UnknownError
+	UnknownError,
+	VoterIsAuthor
 }

@@ -21,16 +21,12 @@ public class ServerData {
 	static List<User> loggedUsers;
 	static List<Post> posts;
 	static List<Pair<Integer, Integer>> follows; //First element is followerID, second element is followedID
-	static List<Comment> comments;
-	static List<Vote> votes;
 
 	static{
 		users = new ConcurrentHashMap<>();
 		loggedUsers = Collections.synchronizedList(new LinkedList<>());
 		posts = Collections.synchronizedList(new LinkedList<>());
 		follows = Collections.synchronizedList(new LinkedList<>());
-		comments = Collections.synchronizedList(new LinkedList<>());
-		votes = Collections.synchronizedList(new LinkedList<>());
 		loadFromDisk();
 	}
 
@@ -43,13 +39,13 @@ public class ServerData {
 		System.out.println("New user with username " + username + " successfully registered to the platform");
 	}
 
-	public static List<Post> getFeed(User user){
+	public static List<PostViewShort> getFeed(User user){
 		List<Integer> followedList = follows.stream().filter(followRelationship -> followRelationship.first == user.id).map(f -> f.second).collect(Collectors.toList());
-		return posts.stream().filter(post -> followedList.contains(post.authorId)).sorted(Comparator.comparing(c -> -(c.id))).collect(Collectors.toList());
+		return posts.stream().filter(post -> followedList.contains(post.authorId)).sorted(Comparator.comparing(c -> -(c.id))).map(Post::getPostViewShort).collect(Collectors.toList());
 	}
 
-	public static List<Post> getPosts(User user){
-		return posts.stream().filter(post -> post.authorId == user.id).sorted(Comparator.comparing(c -> -(c.id))).collect(Collectors.toList());
+	public static List<PostViewShort> getPosts(User user){
+		return posts.stream().filter(post -> post.authorId == user.id).sorted(Comparator.comparing(c -> -(c.id))).map(Post::getPostViewShort).collect(Collectors.toList());
 	}
 
 	public static int addPost(User author, String title, String text){
@@ -77,11 +73,15 @@ public class ServerData {
 		}
 	}
 
+	public static boolean userFollows(int follower, int followed){
+		return follows.stream().anyMatch(f -> f.first == follower && f.second == followed);
+	}
+
 	public static boolean follow(int follower, int followed){
 		if(follower == followed){
 			return false;
 		}
-		if(follows.stream().anyMatch(f -> f.first == follower && f.second == followed)){
+		if(userFollows(follower, followed)){
 			return false;
 		}else{
 			follows.add(new Pair<>(follower, followed));
@@ -120,15 +120,56 @@ public class ServerData {
 		return posts.stream().filter(p -> p.id == postId).findFirst().orElse(null);
 	}
 
-	public static int getVoteCount(int postId, boolean upvotes){
-		return votes.stream().reduce(0, (count, vote) -> count + (vote.postId == postId ? vote.upvote == upvotes ? 1 : 0 : 0), Integer::sum);
+	public static PostView getPostViewWithId(int postId, int userId){
+		Post p = getPostWithId(postId);
+		if(p == null){
+			return null;
+		}else{
+			PostView out = p.getPostView();
+			Vote v = p.votes.stream().filter(vote -> vote.voterId == userId).findFirst().orElse(null);
+			if(v != null){
+				if(v.upvote){
+					out.setUpvoted();
+				}else{
+					out.setDownvoted();
+				}
+			}
+			return out;
+		}
+	}
+
+	public static PostViewShort getPostViewShortWithId(int postId){
+		Post p = getPostWithId(postId);
+		if(p == null){
+			return null;
+		}else{
+			return p.getPostViewShort();
+		}
 	}
 
 	public static List<Comment> getComments(int postId){
-		return comments.stream().filter(comment -> comment.postId == postId).collect(Collectors.toList());
+		Post p = getPostWithId(postId);
+		if(p == null){
+			return new LinkedList<>();
+		}
+		return Collections.unmodifiableList(p.comments);
 	}
 
-	public static 
+	public static ErrorMessage vote(int postId, int userId, boolean upvote){
+		Post p = getPostWithId(postId);
+		if(p == null) {
+			return ErrorMessage.InvalidPostId;
+		}
+		if(p.authorId == userId){
+			return ErrorMessage.VoterIsAuthor;
+		}
+		if(p.votes.stream().anyMatch(vote -> vote.voterId == userId)){
+			return ErrorMessage.AlreadyVoted;
+		}
+
+		p.votes.add(new Vote(userId, upvote));
+		return ErrorMessage.Success;
+	}
 
 
 	public static void saveToDisk(){

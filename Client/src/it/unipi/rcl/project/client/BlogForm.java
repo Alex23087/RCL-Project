@@ -1,6 +1,6 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.common.Post;
+import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
 import java.util.List;
@@ -17,7 +17,7 @@ public class BlogForm extends WinsomeForm {
 	private JButton postButton;
 	private JTextField titleField;
 
-	private List<Post> posts;
+	private List<PostViewShort> posts;
 
 	BlogForm(AppEventDelegate aed) {
 		super(aed);
@@ -26,7 +26,7 @@ public class BlogForm extends WinsomeForm {
 
 		ServerProxy.instance.getPosts(posts -> {
 			this.posts = posts;
-			scrollPane.setViewportView(makePanelWithPosts(posts));
+			scrollPane.setViewportView(makePanelWithPostViews(posts, true));
 		}, errorMessage -> {});
 
 		postButton.addActionListener(actionEvent -> {
@@ -41,9 +41,9 @@ public class BlogForm extends WinsomeForm {
 					titleField.setText(titleHint);
 					textField.setText(textHint);
 					postButton.setEnabled(true);
-					ServerProxy.instance.getPostFromId(id, post -> {
-						posts.add(0, post);
-						scrollPane.setViewportView(makePanelWithPosts(posts));
+					ServerProxy.instance.getPostViewFromId(id, postView -> {
+						posts.add(0, postView);
+						scrollPane.setViewportView(makePanelWithPostViews(posts, true));
 					}, errorMessage -> {});
 				}, errorMessage -> {
 					postButton.setEnabled(true);
@@ -54,6 +54,7 @@ public class BlogForm extends WinsomeForm {
 		setHint(textField, textHint);
 		setHint(titleField, titleHint);
 
+		blogButton.setEnabled(false);
 		init();
 	}
 

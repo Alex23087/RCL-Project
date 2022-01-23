@@ -48,4 +48,8 @@ public abstract class Form {
 		Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
 		frame.setLocation((int) (dimension.getWidth() / 2 - frame.getSize().getWidth() / 2), (int) (dimension.getHeight() / 2 - frame.getSize().getHeight() / 2));
 	}
+
+	protected final static String makeWrappedText(int width, String str){
+		return "<html><div width=" + width + ">" + str + "</div></html>";
+	}
 }

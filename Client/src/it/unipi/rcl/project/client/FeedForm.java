@@ -1,6 +1,6 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.common.Post;
+import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
 import java.util.List;
@@ -13,14 +13,14 @@ public class FeedForm extends WinsomeForm{
 	private JButton blogButton;
 	private JButton discoverButton;
 	private JScrollPane feedPane;
-	private List<Post> posts;
+	private List<PostViewShort> posts;
 
 	public FeedForm(AppEventDelegate appEventDelegate){
 		super(appEventDelegate);
 
 		ServerProxy.instance.getFeed(posts -> {
 			this.posts = posts;
-			feedPane.setViewportView(makePanelWithPosts(posts));
+			feedPane.setViewportView(makePanelWithPostViews(posts, false));
 		}, errorMessage -> {});
 
 		init();

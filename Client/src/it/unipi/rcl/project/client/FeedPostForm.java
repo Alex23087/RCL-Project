@@ -1,20 +1,52 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.common.Post;
+import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
-public class FeedPostForm {
+public class FeedPostForm extends Form{
 	private JLabel titleLabel;
-	private JLabel textLabel;
 	private JLabel usernameLabel;
 	public JPanel panel;
 
-	public FeedPostForm (Post post){
-		super();
-		titleLabel.setText(post.title);
-		textLabel.setText(post.text);
+	public FeedPostForm (AppEventDelegate aed, PostViewShort post, boolean isBlog){
+		super(aed);
+		titleLabel.setText(makeWrappedText(appEventDelegate.getFrameWidth() - 60, post.title));
 		usernameLabel.setText(post.authorId + "");
 		ServerProxy.instance.getUsernameFromId(post.authorId, username -> usernameLabel.setText(username), errorMessage -> {});
+
+		panel.addMouseListener(new MouseListener() {
+			@Override
+			public void mouseClicked(MouseEvent mouseEvent) {
+				appEventDelegate.onPostViewTransition(post, isBlog);
+			}
+
+			@Override
+			public void mousePressed(MouseEvent mouseEvent) {
+
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent mouseEvent) {
+
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent mouseEvent) {
+
+			}
+
+			@Override
+			public void mouseExited(MouseEvent mouseEvent) {
+
+			}
+		});
+	}
+
+	@Override
+	public JPanel getPanel() {
+		return panel;
 	}
 }
