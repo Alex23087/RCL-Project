@@ -2,6 +2,7 @@ package it.unipi.rcl.project.client;
 
 import it.unipi.rcl.project.client.AppEventDelegate;
 import it.unipi.rcl.project.client.WinsomeForm;
+import it.unipi.rcl.project.common.Comment;
 import it.unipi.rcl.project.common.PostView;
 import it.unipi.rcl.project.common.PostViewShort;
 import it.unipi.rcl.project.server.ServerData;
@@ -24,27 +25,40 @@ public class PostViewForm extends WinsomeForm {
 	private JLabel downvoteLabel;
 	private JScrollPane commentScrollPane;
 	private JPanel postPanel;
+	private JTextField commentTextField;
+	private JButton commentButton;
 	private PostView postView;
 
 	public PostViewForm(AppEventDelegate aed, PostViewShort postViewShort, boolean comingFromBlog) {
 		super(aed);
+		String commentHint = resourceBundle.getString("comment.text") + " ";
+
 		titleLabel.setText(makeWrappedText(appEventDelegate.getFrameWidth() - 40, postViewShort.title));
+		upvoteButton.setEnabled(false);
+		downvoteButton.setEnabled(false);
+		commentButton.setEnabled(false);
+		setHint(commentTextField, commentHint);
+
 		ServerProxy.instance.getUsernameFromId(postViewShort.authorId, username -> authorLabel.setText(username), errorMessage -> {});
 		ServerProxy.instance.getPostViewFromId(postViewShort.id, postView -> {
 			this.postView = postView;
 			upvoteLabel.setText(Integer.toString(postView.upvotes));
 			downvoteLabel.setText(Integer.toString(postView.downvotes));
 			textLabel.setText(makeWrappedText(appEventDelegate.getFrameWidth() - 40, postView.text));
+			commentButton.setEnabled(true);
 
 			if(postView.upvoted){
 				upvoteButton.setText(resourceBundle.getString("post.upvoted"));
 				upvoteButton.setEnabled(false);
 				downvoteButton.setEnabled(false);
-			}else if (postView.downvoted){
+			} else if (postView.downvoted){
 				downvoteButton.setText(resourceBundle.getString("post.downvoted"));
 				upvoteButton.setEnabled(false);
 				downvoteButton.setEnabled(false);
-			}else {
+			} else {
+				upvoteButton.setEnabled(true);
+				downvoteButton.setEnabled(true);
+
 				upvoteButton.addActionListener(actionEvent -> {
 					upvoteButton.setEnabled(false);
 					downvoteButton.setEnabled(false);
@@ -81,6 +95,8 @@ public class PostViewForm extends WinsomeForm {
 					});
 				});
 			}
+
+			commentScrollPane.setViewportView(makePanelWithComments(postView.comments));
 		}, errorMessage -> {
 			new AlertForm("error", "error.unknown", "ok");
 			if(comingFromBlog){
@@ -88,6 +104,25 @@ public class PostViewForm extends WinsomeForm {
 			}else{
 				appEventDelegate.onFeedTransition();
 			}
+		});
+
+		commentButton.addActionListener(actionEvent -> {
+			if(commentTextField.getText().equals(commentHint)){
+				new AlertForm("error", "comment.error.text", "ok");
+				return;
+			}
+
+			commentButton.setEnabled(false);
+			String commentText = commentTextField.getText().strip();
+			ServerProxy.instance.comment(postView.id, commentText, () -> {
+				postView.comments.add(0, new Comment(ServerProxy.instance.userId, commentText));
+				commentScrollPane.setViewportView(makePanelWithComments(postView.comments));
+				commentTextField.setText(commentHint);
+				commentButton.setEnabled(true);
+			}, errorMessage -> {
+				new AlertForm("error", "error.unknown", "ok");
+				commentButton.setEnabled(true);
+			});
 		});
 		init();
 	}

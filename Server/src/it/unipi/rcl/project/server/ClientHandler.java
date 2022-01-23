@@ -177,11 +177,25 @@ public class ClientHandler implements Runnable{
 					case Vote:{
 						if(cmd.parameters == null || cmd.parameters.length < 2){
 							ous.writeObject(ErrorMessage.InvalidCommand);
-						}else {
+						} else {
 							try {
 								int postId = Integer.parseInt(cmd.parameters[0]);
 								boolean upvote = Boolean.parseBoolean(cmd.parameters[1]);
 								ous.writeObject(ServerData.vote(postId, user.id, upvote));
+							}catch (NumberFormatException nfe){
+								ous.writeObject(ErrorMessage.InvalidCommand);
+							}
+						}
+						break;
+					}
+					case AddComment: {
+						if(cmd.parameters == null || cmd.parameters.length < 2){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						} else {
+							try {
+								int postId = Integer.parseInt(cmd.parameters[0]);
+								String text = cmd.parameters[1];
+								ous.writeObject(ServerData.addComment(postId, user.id, text));
 							}catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
 							}

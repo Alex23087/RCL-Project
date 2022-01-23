@@ -4,11 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.text.SimpleDateFormat;
 import java.util.ResourceBundle;
 
 public abstract class Form {
 	protected static ResourceBundle resourceBundle = ResourceBundle.getBundle("it/unipi/rcl/project/client/WinsomeStrings");
 	protected AppEventDelegate appEventDelegate;
+
+	protected static final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
 	Form(AppEventDelegate aed){
 		this.appEventDelegate = aed;
@@ -49,7 +52,7 @@ public abstract class Form {
 		frame.setLocation((int) (dimension.getWidth() / 2 - frame.getSize().getWidth() / 2), (int) (dimension.getHeight() / 2 - frame.getSize().getHeight() / 2));
 	}
 
-	protected final static String makeWrappedText(int width, String str){
+	protected static String makeWrappedText(int width, String str){
 		return "<html><div width=" + width + ">" + str + "</div></html>";
 	}
 }

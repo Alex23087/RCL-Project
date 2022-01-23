@@ -1,5 +1,6 @@
 package it.unipi.rcl.project.client;
 
+import it.unipi.rcl.project.common.Comment;
 import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
@@ -36,6 +37,15 @@ public abstract class WinsomeForm extends Form{
 		contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
 		for (PostViewShort p: posts) {
 			contents.add(new FeedPostForm(appEventDelegate, p, isBlog).panel);
+		}
+		return contents;
+	}
+
+	protected final JPanel makePanelWithComments(List<Comment> comments){
+		JPanel contents = new JPanel();
+		contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
+		for (Comment c: comments) {
+			contents.add(new CommentForm(appEventDelegate, c).getPanel());
 		}
 		return contents;
 	}

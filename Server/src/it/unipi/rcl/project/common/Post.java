@@ -10,14 +10,15 @@ import java.util.List;
 public class Post implements Serializable {
 	public static int lastIDAssigned = 0;
 
-	public int id;
-	public int authorId;
-	public String title;
-	public String text;
-	public boolean isRewin;
-	public int rewinID;
-	public List<Vote> votes;
-	public List<Comment> comments;
+	public final int id;
+	public final int authorId;
+	public final String title;
+	public final String text;
+	public final boolean isRewin;
+	public final int rewinID;
+	public final List<Vote> votes;
+	public final List<Comment> comments;
+	public final long timestamp;
 
 	public Post(User author, String title, String text){
 		this.authorId = author.id;
@@ -28,6 +29,7 @@ public class Post implements Serializable {
 		this.id = getNewID();
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
+		this.timestamp = System.currentTimeMillis();
 	}
 
 	public Post(User author, int rewinID){
@@ -39,6 +41,7 @@ public class Post implements Serializable {
 		this.id = getNewID();
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
+		this.timestamp = System.currentTimeMillis();
 	}
 
 	private static synchronized int getNewID(){
@@ -72,10 +75,10 @@ public class Post implements Serializable {
 	public PostView getPostView(){
 		int upvoteCount = getUpvoteCount();
 		int downvoteCount = votes.size() - upvoteCount;
-		return new PostView(this.id, this.authorId, this.title, this.text, upvoteCount, downvoteCount, Collections.unmodifiableList(this.comments));
+		return new PostView(this.id, this.authorId, this.title, this.text, upvoteCount, downvoteCount, this.comments, this.timestamp);
 	}
 
 	public PostViewShort getPostViewShort(){
-		return new PostViewShort(this.id, this.authorId, this.title);
+		return new PostViewShort(this.id, this.authorId, this.title, this.timestamp);
 	}
 }

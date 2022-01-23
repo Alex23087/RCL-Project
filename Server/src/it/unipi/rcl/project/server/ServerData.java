@@ -171,6 +171,15 @@ public class ServerData {
 		return ErrorMessage.Success;
 	}
 
+	public static ErrorMessage addComment(int postId, int userId, String text){
+		Post p = getPostWithId(postId);
+		if(p == null){
+			return ErrorMessage.InvalidPostId;
+		}
+		p.comments.add(new Comment(userId, text));
+		return ErrorMessage.Success;
+	}
+
 
 	public static void saveToDisk(){
 		saveUsers();

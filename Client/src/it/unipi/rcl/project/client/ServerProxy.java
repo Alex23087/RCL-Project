@@ -416,6 +416,30 @@ public class ServerProxy{
 		});
 	}
 
+	public void comment(Integer postID, String text, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.AddComment, new String[]{postID.toString(), text}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+						break;
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
 		public interface Callback<T> {
 		void run(T value);
 	}

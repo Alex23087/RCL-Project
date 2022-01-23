@@ -3,13 +3,13 @@ package it.unipi.rcl.project.common;
 import java.io.Serializable;
 
 public class Comment implements Serializable {
-	public int commenterId;
-	public int postId;
-	public String text;
+	public final int commenterId;
+	public final String text;
+	public final long timestamp;
 
-	public Comment(int commenterId, int postId, String text){
+	public Comment(int commenterId, String text){
 		this.commenterId = commenterId;
-		this.postId = postId;
 		this.text = text;
+		this.timestamp = System.currentTimeMillis();
 	}
 }

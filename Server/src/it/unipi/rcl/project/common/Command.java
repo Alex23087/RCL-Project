@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 public class Command implements Serializable {
 	public enum Operation{
+		AddComment,
 		Login,
 		Follow,
 		GetBalance,
