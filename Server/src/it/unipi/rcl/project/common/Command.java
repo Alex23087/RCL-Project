@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class Command implements Serializable {
 	public enum Operation{
 		AddComment,
-		Login,
+		DeletePost,
 		Follow,
 		GetBalance,
 		GetBTCConversion,
@@ -17,6 +17,8 @@ public class Command implements Serializable {
 		GetPostViewFromId,
 		GetUsernameFromId,
 		ListUsers,
+		Login,
+		Logout,
 		PublishPost,
 		Rewin,
 		Unfollow,

@@ -27,6 +27,7 @@ public class PostViewForm extends WinsomeForm {
 	private JPanel postPanel;
 	private JTextField commentTextField;
 	private JButton commentButton;
+	private JButton deletePostButton;
 	private PostView postView;
 
 	public PostViewForm(AppEventDelegate aed, PostViewShort postViewShort, boolean comingFromBlog) {
@@ -124,6 +125,23 @@ public class PostViewForm extends WinsomeForm {
 				commentButton.setEnabled(true);
 			});
 		});
+
+		if(postViewShort.authorId != ServerProxy.instance.userId) {
+			deletePostButton.setVisible(false);
+		}else{
+			deletePostButton.addActionListener(actionEvent -> {
+				ServerProxy.instance.deletePost(postViewShort.id, () -> {
+					AlertForm.successAlert("post.deleted");
+					if(comingFromBlog){
+						appEventDelegate.onBlogTransition();
+					}else{
+						appEventDelegate.onFeedTransition();
+					}
+				}, errorMessage -> {
+					AlertForm.errorAlert("error.unknown");
+				});
+			});
+		}
 		init();
 	}
 

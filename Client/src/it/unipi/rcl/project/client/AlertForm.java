@@ -26,4 +26,12 @@ public class AlertForm extends Form{
 	public JPanel getPanel() {
 		return panel;
 	}
+
+	public static AlertForm errorAlert(String message){
+		return new AlertForm("error", message, "ok");
+	}
+
+	public static AlertForm successAlert(String message){
+		return new AlertForm("success", message, "ok");
+	}
 }

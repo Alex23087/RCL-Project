@@ -4,8 +4,6 @@ import it.unipi.rcl.project.common.Pair;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.util.Arrays;
 
 public class DiscoverForm extends WinsomeForm{
 	private JPanel panel;

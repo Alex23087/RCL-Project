@@ -15,6 +15,7 @@ public enum ErrorMessage {
 	UserAlreadyExists,
 	UserAlreadyLoggedIn,
 	UserNotLoggedIn,
+	UserNotAuthor,
 	UnknownError,
 	VoterIsAuthor
 }

@@ -2,7 +2,6 @@ package it.unipi.rcl.project.server;
 
 import it.unipi.rcl.project.common.Command;
 import it.unipi.rcl.project.common.ErrorMessage;
-import it.unipi.rcl.project.common.Post;
 import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
@@ -197,6 +196,25 @@ public class ClientHandler implements Runnable{
 								String text = cmd.parameters[1];
 								ous.writeObject(ServerData.addComment(postId, user.id, text));
 							}catch (NumberFormatException nfe){
+								ous.writeObject(ErrorMessage.InvalidCommand);
+							}
+						}
+						break;
+					}
+					case Logout: {
+						ServerData.loggedUsers.removeIf(u -> u.id == user.id);
+						user = null;
+						ous.writeObject(ErrorMessage.Success);
+						break;
+					}
+					case DeletePost: {
+						if(cmd.parameters == null || cmd.parameters.length < 1){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						}else{
+							try{
+								int postId = Integer.parseInt(cmd.parameters[0]);
+								ous.writeObject(ServerData.deletePost(postId, user.id));
+							} catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
 							}
 						}

@@ -180,6 +180,19 @@ public class ServerData {
 		return ErrorMessage.Success;
 	}
 
+	public static ErrorMessage deletePost(int postId, int userId){
+		Post p = getPostWithId(postId);
+		if(p == null){
+			return ErrorMessage.InvalidPostId;
+		}
+		if(p.authorId != userId){
+			return ErrorMessage.UserNotAuthor;
+		}
+
+		posts.removeIf(post -> (post.id == postId) || (post.isRewin && post.rewinID == p.id));
+		return ErrorMessage.Success;
+	}
+
 
 	public static void saveToDisk(){
 		saveUsers();

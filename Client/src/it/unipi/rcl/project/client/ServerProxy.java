@@ -25,13 +25,15 @@ public class ServerProxy{
 	public int userId = -1;
 	public long balance = -1;
 	public List<Integer> followed;
-	private Map<Integer, String> usernames; //Contains the associations between user ids and usernames
+	public List<Integer> followers;
+	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 
-	private ExecutorService pool;
+	private final ExecutorService pool;
 
 	private ServerProxy(){
 		pool = Executors.newFixedThreadPool(1);
 		followed = Collections.synchronizedList(new LinkedList<>());
+		followers = Collections.synchronizedList(new LinkedList<>());
 		usernames = new HashMap<>();
 	}
 
@@ -440,7 +442,63 @@ public class ServerProxy{
 		});
 	}
 
-		public interface Callback<T> {
+	public void logout(Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.Logout, null));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						resetStatus();
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+						break;
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public void deletePost(Integer postId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.DeletePost, new String[]{postId.toString()}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+						break;
+				}
+			} catch (IOException | ClassNotFoundException e) {
+				e.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	private void resetStatus(){
+		user = null;
+		userId = -1;
+		followed.clear();
+		followers.clear();
+	}
+
+	public interface Callback<T> {
 		void run(T value);
 	}
 }

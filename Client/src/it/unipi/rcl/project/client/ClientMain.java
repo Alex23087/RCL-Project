@@ -3,7 +3,6 @@ package it.unipi.rcl.project.client;
 import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
-import java.awt.*;
 
 public class ClientMain {
 
@@ -21,7 +20,6 @@ public class ClientMain {
 		    e.printStackTrace();
 	    }
 
-
 	    AppEventDelegate aed = new AppEventDelegate() {
 		    @Override
 		    public int getFrameWidth() {
@@ -34,7 +32,12 @@ public class ClientMain {
 				onFeedTransition();
 			}
 
-			@Override
+		    @Override
+		    public void onLogout() {
+			    transitionToForm(new SignUpInForm(this));
+		    }
+
+		    @Override
 			public void onBlogTransition() {
 				transitionToForm(new BlogForm(this));
 			}
@@ -55,6 +58,11 @@ public class ClientMain {
 			}
 
 		    @Override
+		    public void onProfileTransition() {
+			    transitionToForm(new ProfileForm(this));
+		    }
+
+		    @Override
 		    public void onPostViewTransition(PostViewShort postViewShort, boolean comingFromBlog) {
 			    transitionToForm(new PostViewForm(this, postViewShort, comingFromBlog));
 		    }
@@ -71,9 +79,6 @@ public class ClientMain {
 			}
 		};
 
-		SignUpInForm suif = new SignUpInForm(aed);
-	    appFrame.setLayout(new GridLayout());
-	    appFrame.add(suif.getPanel());
-	    appFrame.validate();
+		aed.onLogout();
     }
 }

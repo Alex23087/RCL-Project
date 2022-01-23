@@ -20,7 +20,7 @@ public abstract class WinsomeForm extends Form{
 		getBlogButton().addActionListener(actionEvent -> appEventDelegate.onBlogTransition());
 		getDiscoverButton().addActionListener(actionEvent -> appEventDelegate.onDiscoverTransition());
 		getFeedButton().addActionListener(actionEvent -> appEventDelegate.onFeedTransition());
-		//getProfileButton().addActionListener(actionEvent -> appEventDelegate.onProfileTransition());
+		getProfileButton().addActionListener(actionEvent -> appEventDelegate.onProfileTransition());
 
 		getProfileButton().setText(ServerProxy.instance.user);
 		ServerProxy.instance.getBalance(balance -> getBalanceButton().setText(balance + " WIN"), errorMessage -> {});
