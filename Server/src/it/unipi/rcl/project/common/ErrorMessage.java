@@ -1,16 +1,18 @@
 package it.unipi.rcl.project.common;
 
 public enum ErrorMessage {
-	Success,
-	UserAlreadyExists,
-	InvalidUsername,
-	InvalidPassword,
-	InvalidTags,
-	UserAlreadyLoggedIn,
-	UserNotLoggedIn,
-	NoSuchUser,
-	UnknownError,
 	AlreadyFollowed,
 	InvalidCommand,
-	InvalidPostId
+	InvalidPassword,
+	InvalidPostId,
+	InvalidTags,
+	InvalidUserId,
+	InvalidUsername,
+	NoSuchUser,
+	NotFollowing,
+	Success,
+	UserAlreadyExists,
+	UserAlreadyLoggedIn,
+	UserNotLoggedIn,
+	UnknownError
 }

@@ -22,8 +22,9 @@ public class ServerProxy{
 	private ObjectInputStream ois;
 	private ObjectOutputStream ous;
 	public String user = null;
+	public int userId = -1;
 	public long balance = -1;
-	public List<String> followed;
+	public List<Integer> followed;
 	private Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 
 	private ExecutorService pool;
@@ -110,15 +111,13 @@ public class ServerProxy{
 			try {
 				ous.writeObject(new Command(Command.Operation.Login, new String[]{username, Utils.hashString(password)}));
 				ous.flush();
-				ErrorMessage em = (ErrorMessage) ois.readObject();
-				switch(em){
-					case Success:
-						user = username;
-						successCallback.run();
-						return;
-					default:
-						errorCallback.run(em);
-						return;
+				Object response = ois.readObject();
+				if(response instanceof ErrorMessage) {
+					errorCallback.run((ErrorMessage) response);
+				}else{
+					user = username;
+					userId = (int) response;
+					successCallback.run();
 				}
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
@@ -231,7 +230,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void listUsers(Callback<List<Pair<String, String[]>>> successCallback, Callback<ErrorMessage> errorCallback){
+	public void listUsers(Callback<List<Pair<Integer, String[]>>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -240,7 +239,7 @@ public class ServerProxy{
 
 			try {
 				ous.writeObject(new Command(Command.Operation.ListUsers, null));
-				successCallback.run((List<Pair<String, String[]>>) ois.readObject());
+				successCallback.run((List<Pair<Integer, String[]>>) ois.readObject());
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -248,7 +247,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void follow(String username, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void follow(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -256,11 +255,11 @@ public class ServerProxy{
 			}
 
 			try{
-				ous.writeObject(new Command(Command.Operation.Follow, new String[]{username}));
+				ous.writeObject(new Command(Command.Operation.Follow, new String[]{Integer.toString(userId)}));
 				ErrorMessage em = (ErrorMessage) ois.readObject();
 				switch (em){
 					case Success:
-						followed.add(username);
+						followed.add(userId);
 						successCallback.run();
 						break;
 					default:
@@ -273,7 +272,32 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFollowers(Callback<List<String>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void unfollow(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try{
+				ous.writeObject(new Command(Command.Operation.Unfollow, new String[]{Integer.toString(userId)}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						followed.remove((Integer) userId);
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+				}
+			}catch (IOException | ClassNotFoundException ioe){
+				ioe.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			}
+		});
+	}
+
+	public void getFollowers(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -286,7 +310,7 @@ public class ServerProxy{
 				if(response instanceof ErrorMessage){
 					errorMessageCallback.run((ErrorMessage) response);
 				}else{
-					followed = (List<String>) response;
+					followed = (List<Integer>) response;
 					successCallback.run(followed);
 				}
 			}catch (IOException | ClassNotFoundException ioe){
@@ -296,7 +320,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFollowed(Callback<List<String>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void getFollowed(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -309,7 +333,7 @@ public class ServerProxy{
 				if(response instanceof ErrorMessage){
 					errorMessageCallback.run((ErrorMessage) response);
 				}else{
-					followed = (List<String>) response;
+					followed = (List<Integer>) response;
 					successCallback.run(followed);
 				}
 			}catch (IOException | ClassNotFoundException ioe){

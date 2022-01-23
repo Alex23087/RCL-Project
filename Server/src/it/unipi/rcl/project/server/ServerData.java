@@ -5,9 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import it.unipi.rcl.project.common.Pair;
-import it.unipi.rcl.project.common.Post;
-import it.unipi.rcl.project.common.Utils;
+import it.unipi.rcl.project.common.*;
 
 import java.io.*;
 import java.nio.file.FileAlreadyExistsException;
@@ -23,17 +21,21 @@ public class ServerData {
 	static List<User> loggedUsers;
 	static List<Post> posts;
 	static List<Pair<Integer, Integer>> follows; //First element is followerID, second element is followedID
+	static List<Comment> comments;
+	static List<Vote> votes;
 
 	static{
 		users = new ConcurrentHashMap<>();
 		loggedUsers = Collections.synchronizedList(new LinkedList<>());
 		posts = Collections.synchronizedList(new LinkedList<>());
 		follows = Collections.synchronizedList(new LinkedList<>());
+		comments = Collections.synchronizedList(new LinkedList<>());
+		votes = Collections.synchronizedList(new LinkedList<>());
 		loadFromDisk();
 	}
 
-	public static List<Pair<String, String[]>> getUsersWithTags(String[] tags){
-		return users.values().stream().filter(user -> Arrays.stream(user.tags).anyMatch(t -> Arrays.asList(tags).contains(t))).map(user -> new Pair<>(user.username, user.tags)).collect(Collectors.toList());
+	public static List<Pair<Integer, String[]>> getUsersWithTags(String[] tags){
+		return users.values().stream().filter(user -> Arrays.stream(user.tags).anyMatch(t -> Arrays.asList(tags).contains(t))).map(user -> new Pair<>(user.id, user.tags)).collect(Collectors.toList());
 	}
 
 	public static void addUser(String username, String password, String[] tags){
@@ -76,6 +78,9 @@ public class ServerData {
 	}
 
 	public static boolean follow(int follower, int followed){
+		if(follower == followed){
+			return false;
+		}
 		if(follows.stream().anyMatch(f -> f.first == follower && f.second == followed)){
 			return false;
 		}else{
@@ -84,7 +89,22 @@ public class ServerData {
 		}
 	}
 
-	public static List<String> getFollowed(int userId){
+	public static boolean unfollow(int follower, int followed){
+		if(follower == followed){
+			return false;
+		}
+		Iterator<Pair<Integer, Integer>> i = follows.iterator();
+		while(i.hasNext()){
+			Pair<Integer, Integer> f = i.next();
+			if(f.first == follower && f.second == followed){
+				i.remove();
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static List<Integer> getFollowed(int userId){
 		/*List<String> followed = new ArrayList<>();
 		for(Pair<Integer, Integer> f: follows){
 			if(f.first != userId){
@@ -93,13 +113,22 @@ public class ServerData {
 			followed.add(getUser(f.second).username);
 		}
 		return followed;*/
-		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).username).collect(Collectors.toList());
+		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).id).collect(Collectors.toList());
 	}
 
 	public static Post getPostWithId(int postId){
 		return posts.stream().filter(p -> p.id == postId).findFirst().orElse(null);
 	}
 
+	public static int getVoteCount(int postId, boolean upvotes){
+		return votes.stream().reduce(0, (count, vote) -> count + (vote.postId == postId ? vote.upvote == upvotes ? 1 : 0 : 0), Integer::sum);
+	}
+
+	public static List<Comment> getComments(int postId){
+		return comments.stream().filter(comment -> comment.postId == postId).collect(Collectors.toList());
+	}
+
+	public static 
 
 
 	public static void saveToDisk(){

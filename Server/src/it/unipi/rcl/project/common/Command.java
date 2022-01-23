@@ -6,18 +6,20 @@ import java.util.Arrays;
 public class Command implements Serializable {
 	public enum Operation{
 		Login,
-		GetFeed,
-		GetPosts,
-		PublishPost,
-		Rewin,
+		Follow,
 		GetBalance,
 		GetBTCConversion,
-		ListUsers,
-		Follow,
-		GetFollowers,
+		GetFeed,
 		GetFollowed,
+		GetFollowers,
+		GetPostFromId,
+		GetPosts,
 		GetUsernameFromId,
-		GetPostFromId
+		ListUsers,
+		PublishPost,
+		Rewin,
+		ShowPost,
+		Unfollow
 	}
 
 	public Operation op;

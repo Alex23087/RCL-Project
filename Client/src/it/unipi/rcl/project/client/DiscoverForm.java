@@ -4,6 +4,7 @@ import it.unipi.rcl.project.common.Pair;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.util.Arrays;
 
 public class DiscoverForm extends WinsomeForm{
@@ -19,11 +20,10 @@ public class DiscoverForm extends WinsomeForm{
 		super(aed);
 
 		ServerProxy.instance.listUsers(users -> {
-			System.out.println(Arrays.toString(users.stream().map(Pair::toString).toArray()));
 			JPanel contents = new JPanel();
 			contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
-			for (Pair<String, String[]> u: users) {
-				if(u.first.equals(ServerProxy.instance.user)){
+			for (Pair<Integer, String[]> u: users) {
+				if(u.first.equals(ServerProxy.instance.userId)){
 					continue;
 				}
 				contents.add(new UserPanel(u));
@@ -32,16 +32,6 @@ public class DiscoverForm extends WinsomeForm{
 		}, errorMessage -> {});
 
 		init();
-	}
-
-	private void updatePane(){
-		if (!SwingUtilities.isEventDispatchThread()) {
-			SwingUtilities.invokeLater(this::updatePane);
-			return;
-		}
-		scrollPane.setViewportView(scrollPane.getViewport());
-		scrollPane.revalidate();
-		scrollPane.repaint();
 	}
 
 	@Override
@@ -75,10 +65,13 @@ public class DiscoverForm extends WinsomeForm{
 	}
 
 	private static class UserPanel extends JPanel{
-		public UserPanel(Pair<String, String[]> user){
+		private boolean isFollowed;
+
+		public UserPanel(Pair<Integer, String[]> user){
 			super();
 			setLayout(new FlowLayout());
-			JLabel usernameLabel = new JLabel(user.first);
+			JLabel usernameLabel = new JLabel(user.first.toString());
+			ServerProxy.instance.getUsernameFromId(user.first, usernameLabel::setText, errorMessage -> {});
 			usernameLabel.setHorizontalTextPosition(JLabel.TRAILING);
 			add(usernameLabel);
 
@@ -92,29 +85,51 @@ public class DiscoverForm extends WinsomeForm{
 			add(tags);
 
 			JButton followButton = new JButton();
-			if(ServerProxy.instance.followed.contains(user.first)){
-				followButton.setText(resourceBundle.getString("following"));
-				followButton.setEnabled(false);
-				//TODO: maybe add unfollow button
+
+			isFollowed = ServerProxy.instance.followed.contains(user.first);
+
+			if(isFollowed){
+				followButton.setText(resourceBundle.getString("unfollow"));
 			}else {
 				followButton.setText(resourceBundle.getString("follow"));
-				followButton.addActionListener(actionEvent -> {
-					followButton.setEnabled(false);
-					ServerProxy.instance.follow(user.first, () -> {
-						followButton.setText(resourceBundle.getString("following"));
+			}
+
+			followButton.addActionListener(actionEvent -> {
+				followButton.setEnabled(false);
+				if(isFollowed){
+					ServerProxy.instance.unfollow(user.first, () -> {
+						followButton.setText(resourceBundle.getString("follow"));
+						isFollowed = false;
+						followButton.setEnabled(true);
 					}, errorMessage -> {
 						switch (errorMessage) {
-							case AlreadyFollowed:
-								new AlertForm("error", "error.already.followed", "ok");
+							case NotFollowing:
+								new AlertForm("error", "error.not.following", "ok");
 								break;
-							case InvalidUsername:
+							case InvalidUserId:
 								new AlertForm("error", "user.invalid", "ok");
 								break;
 						}
 						followButton.setEnabled(true);
 					});
-				});
-			}
+				}else{
+					ServerProxy.instance.follow(user.first, () -> {
+						followButton.setText(resourceBundle.getString("unfollow"));
+						isFollowed = true;
+						followButton.setEnabled(true);
+					}, errorMessage -> {
+						switch (errorMessage) {
+							case AlreadyFollowed:
+								new AlertForm("error", "error.already.followed", "ok");
+								break;
+							case InvalidUserId:
+								new AlertForm("error", "user.invalid", "ok");
+								break;
+						}
+						followButton.setEnabled(true);
+					});
+				}
+			});
 			add(followButton);
 		}
 	}
