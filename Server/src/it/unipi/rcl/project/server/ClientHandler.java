@@ -98,14 +98,18 @@ public class ClientHandler implements Runnable{
 					}
 					case PublishPost: {
 						//TODO: error checking
-						int id = ServerData.addPost(user, cmd.parameters[0], cmd.parameters[1]);
+						int id = ServerData.addPost(user.id, cmd.parameters[0], cmd.parameters[1]);
 						ous.writeObject(id);
 						System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Created new post with id " + id);
 						break;
 					}
 					case Rewin: {
-						int id = ServerData.addRewin(user, Integer.parseInt(cmd.parameters[0]));
-						//TODO: Finish case
+						try {
+							ErrorMessage errorMessage = ServerData.rewin(user.id, Integer.parseInt(cmd.parameters[0]));
+							ous.writeObject(errorMessage);
+						} catch (NonexistentPostException npe){
+							ous.writeObject(ErrorMessage.InvalidPostId);
+						}
 						break;
 					}
 					case ListUsers: {
@@ -149,13 +153,11 @@ public class ClientHandler implements Runnable{
 						try {
 							int postID = Integer.parseInt(cmd.parameters[0]);
 							PostView p = ServerData.getPostViewWithId(postID, user.id);
-							if (p == null) {
-								ous.writeObject(ErrorMessage.InvalidPostId);
-							} else {
-								ous.writeObject(p);
-							}
+							ous.writeObject(p);
 						} catch (NumberFormatException nfe) {
 							ous.writeObject(ErrorMessage.InvalidCommand);
+						} catch (NonexistentPostException e) {
+							ous.writeObject(ErrorMessage.InvalidPostId);
 						}
 						break;
 					}
@@ -183,6 +185,8 @@ public class ClientHandler implements Runnable{
 								ous.writeObject(ServerData.vote(postId, user.id, upvote));
 							}catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
+							} catch (NonexistentPostException e) {
+								ous.writeObject(ErrorMessage.InvalidPostId);
 							}
 						}
 						break;
@@ -197,6 +201,8 @@ public class ClientHandler implements Runnable{
 								ous.writeObject(ServerData.addComment(postId, user.id, text));
 							}catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
+							} catch (NonexistentPostException e) {
+								ous.writeObject(ErrorMessage.InvalidPostId);
 							}
 						}
 						break;
@@ -216,6 +222,8 @@ public class ClientHandler implements Runnable{
 								ous.writeObject(ServerData.deletePost(postId, user.id));
 							} catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
+							} catch (NonexistentPostException e) {
+								ous.writeObject(ErrorMessage.InvalidPostId);
 							}
 						}
 						break;

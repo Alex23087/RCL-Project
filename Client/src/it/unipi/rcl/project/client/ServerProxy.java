@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -27,6 +28,7 @@ public class ServerProxy{
 	public List<Integer> followed;
 	public List<Integer> followers;
 	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
+	private Runnable unknownExceptionHandler = () -> {};
 
 	private final ExecutorService pool;
 
@@ -60,6 +62,7 @@ public class ServerProxy{
 			ois = new ObjectInputStream(socket.getInputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
+			unknownExceptionHandler.run();
 			return false;
 		}
 		System.out.println("Connected to server TCP");
@@ -71,12 +74,22 @@ public class ServerProxy{
 		try {
 			registry = LocateRegistry.getRegistry(Constants.registryPort);
 			signUpService = (ISignUpService) registry.lookup(Constants.signUpServiceName);
-		}catch(RemoteException | NotBoundException re){
+		} catch (ConnectException ce) {
+			unknownExceptionHandler.run();
+			return false;
+		}catch (RemoteException | NotBoundException re){
 			re.printStackTrace();
 			return false;
 		}
 		System.out.println("Connected to RMI service");
 		return true;
+	}
+
+	public void registerUnknownExceptionHandler(Runnable handler){
+		unknownExceptionHandler = () -> {
+			handler.run();
+			resetStatus();
+		};
 	}
 
 	public void register(String username, String password, String[] tags, Runnable successCallback, Callback<ErrorMessage> errorCallback){
@@ -121,10 +134,12 @@ public class ServerProxy{
 					userId = (int) response;
 					successCallback.run();
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
 				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -140,10 +155,12 @@ public class ServerProxy{
 				ous.writeObject(new Command(Command.Operation.GetPosts, null));
 				successCallback.run((List<PostViewShort>) ois.readObject());
 				return;
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
 				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -159,10 +176,12 @@ public class ServerProxy{
 				ous.writeObject(new Command(Command.Operation.GetFeed, null));
 				successCallback.run((List<PostViewShort>) ois.readObject());
 				return;
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
 				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -178,10 +197,12 @@ public class ServerProxy{
 				ous.writeObject(new Command(Command.Operation.PublishPost, new String[]{title, text}));
 				successCallback.run((int) ois.readObject());
 				return;
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
 				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -202,10 +223,12 @@ public class ServerProxy{
 					ous.writeObject(new Command(Command.Operation.GetBalance, null));
 					successCallback.run((long) ois.readObject());
 					return;
-				} catch (IOException | ClassNotFoundException e) {
+				} catch (ClassNotFoundException e) {
 					e.printStackTrace();
 					errorCallback.run(ErrorMessage.UnknownError);
 					return;
+				} catch (IOException e) {
+					unknownExceptionHandler.run();
 				}
 			});
 		}else{
@@ -224,10 +247,12 @@ public class ServerProxy{
 				ous.writeObject(new Command(Command.Operation.GetBTCConversion, null));
 				successCallback.run((double) ois.readObject());
 				return;
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
 				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -242,9 +267,11 @@ public class ServerProxy{
 			try {
 				ous.writeObject(new Command(Command.Operation.ListUsers, null));
 				successCallback.run((List<Pair<Integer, String[]>>) ois.readObject());
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -267,9 +294,11 @@ public class ServerProxy{
 					default:
 						errorMessageCallback.run(em);
 				}
-			}catch (IOException | ClassNotFoundException ioe){
+			}catch (ClassNotFoundException ioe){
 				ioe.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -292,9 +321,11 @@ public class ServerProxy{
 					default:
 						errorMessageCallback.run(em);
 				}
-			}catch (IOException | ClassNotFoundException ioe){
+			}catch (ClassNotFoundException ioe){
 				ioe.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -315,9 +346,11 @@ public class ServerProxy{
 					followed = (List<Integer>) response;
 					successCallback.run(followed);
 				}
-			}catch (IOException | ClassNotFoundException ioe){
+			}catch (ClassNotFoundException ioe){
 				ioe.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -338,9 +371,11 @@ public class ServerProxy{
 					followed = (List<Integer>) response;
 					successCallback.run(followed);
 				}
-			}catch (IOException | ClassNotFoundException ioe){
+			}catch (ClassNotFoundException ioe){
 				ioe.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -365,9 +400,11 @@ public class ServerProxy{
 					}else{
 						errorMessageCallback.run((ErrorMessage) response);
 					}
-				} catch (IOException | ClassNotFoundException e) {
+				} catch (ClassNotFoundException e) {
 					e.printStackTrace();
 					errorMessageCallback.run(ErrorMessage.UnknownError);
+				} catch (IOException e) {
+					unknownExceptionHandler.run();
 				}
 			}
 		});
@@ -387,9 +424,11 @@ public class ServerProxy{
 				}else{
 					errorMessageCallback.run((ErrorMessage) response);
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -411,9 +450,11 @@ public class ServerProxy{
 						errorMessageCallback.run(em);
 						break;
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -435,9 +476,11 @@ public class ServerProxy{
 						errorMessageCallback.run(em);
 						break;
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -460,9 +503,11 @@ public class ServerProxy{
 						errorMessageCallback.run(em);
 						break;
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -484,9 +529,37 @@ public class ServerProxy{
 						errorMessageCallback.run(em);
 						break;
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
+			}
+		});
+	}
+
+	public void rewin(Integer postId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+			try {
+				ous.writeObject(new Command(Command.Operation.Rewin, new String[]{postId.toString()}));
+				ErrorMessage em = (ErrorMessage) ois.readObject();
+				switch (em){
+					case Success:
+						successCallback.run();
+						break;
+					default:
+						errorMessageCallback.run(em);
+						break;
+				}
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+				errorMessageCallback.run(ErrorMessage.UnknownError);
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
 			}
 		});
 	}
@@ -496,6 +569,10 @@ public class ServerProxy{
 		userId = -1;
 		followed.clear();
 		followers.clear();
+		try {
+			socket.close();
+		} catch (Exception e) {}
+		socket = null;
 	}
 
 	public interface Callback<T> {

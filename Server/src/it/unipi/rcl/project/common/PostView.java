@@ -11,8 +11,8 @@ public class PostView extends PostViewShort {
 	public boolean downvoted = false;
 	public final long timestamp;
 
-	public PostView(int id, int authorId, String title, String text, int upvotes, int downvotes, List<Comment> comments, long timestamp) {
-		super(id, authorId, title, timestamp);
+	public PostView(int id, int authorId, String title, String text, int upvotes, int downvotes, List<Comment> comments, long timestamp, int rewinnerId) {
+		super(id, authorId, title, timestamp, rewinnerId);
 		this.text = text;
 		this.upvotes = upvotes;
 		this.downvotes = downvotes;

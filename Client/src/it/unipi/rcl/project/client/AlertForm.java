@@ -27,11 +27,15 @@ public class AlertForm extends Form{
 		return panel;
 	}
 
-	public static AlertForm errorAlert(String message){
-		return new AlertForm("error", message, "ok");
+	public static void errorAlert(String message){
+		new AlertForm("error", message, "ok");
 	}
 
-	public static AlertForm successAlert(String message){
-		return new AlertForm("success", message, "ok");
+	public static void errorAlert(){
+		errorAlert("error.unknown");
+	}
+
+	public static void successAlert(String message){
+		new AlertForm("success", message, "ok");
 	}
 }

@@ -79,6 +79,11 @@ public class ClientMain {
 			}
 		};
 
+		ServerProxy.instance.registerUnknownExceptionHandler(() -> {
+			aed.onLogout();
+			AlertForm.errorAlert("connection.lost");
+		});
+
 		aed.onLogout();
     }
 }

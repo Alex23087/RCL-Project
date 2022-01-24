@@ -41,21 +41,15 @@ public class ServerData {
 
 	public static List<PostViewShort> getFeed(User user){
 		List<Integer> followedList = follows.stream().filter(followRelationship -> followRelationship.first == user.id).map(f -> f.second).collect(Collectors.toList());
-		return posts.stream().filter(post -> followedList.contains(post.authorId)).sorted(Comparator.comparing(c -> -(c.id))).map(Post::getPostViewShort).collect(Collectors.toList());
+		return posts.stream().filter(post -> post.isRewin ? followedList.contains(post.rewinnerId) : followedList.contains(post.authorId)).sorted(Comparator.comparing(c -> -(c.timestamp))).map(Post::getPostViewShort).collect(Collectors.toList());
 	}
 
 	public static List<PostViewShort> getPosts(User user){
-		return posts.stream().filter(post -> post.authorId == user.id).sorted(Comparator.comparing(c -> -(c.id))).map(Post::getPostViewShort).collect(Collectors.toList());
+		return posts.stream().filter(post -> post.isRewin ? post.rewinnerId == user.id : post.authorId == user.id).sorted(Comparator.comparing(c -> -(c.timestamp))).map(Post::getPostViewShort).collect(Collectors.toList());
 	}
 
-	public static int addPost(User author, String title, String text){
-		Post newPost = new Post(author, title, text);
-		posts.add(newPost);
-		return newPost.id;
-	}
-
-	public static int addRewin(User author, int rewinId){
-		Post newPost = new Post(author, rewinId);
+	public static int addPost(int authorId, String title, String text){
+		Post newPost = new Post(authorId, title, text);
 		posts.add(newPost);
 		return newPost.id;
 	}
@@ -116,50 +110,44 @@ public class ServerData {
 		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).id).collect(Collectors.toList());
 	}
 
-	public static Post getPostWithId(int postId){
-		return posts.stream().filter(p -> p.id == postId).findFirst().orElse(null);
+	public static Post getPostWithId(int postId, boolean recursive) throws NonexistentPostException{
+		Post post = posts.stream().filter(p -> p.id == postId).findFirst().orElseThrow(NonexistentPostException::new);
+		if(recursive && post.isRewin){
+			return getPostWithId(post.rewinID);
+		}else{
+			return post;
+		}
 	}
 
-	public static PostView getPostViewWithId(int postId, int userId){
+	public static Post getPostWithId(int postId) throws NonexistentPostException{
+		return getPostWithId(postId, true);
+	}
+
+		public static PostView getPostViewWithId(int postId, int userId) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
-		if(p == null){
-			return null;
-		}else{
-			PostView out = p.getPostView();
-			Vote v = p.votes.stream().filter(vote -> vote.voterId == userId).findFirst().orElse(null);
-			if(v != null){
-				if(v.upvote){
-					out.setUpvoted();
-				}else{
-					out.setDownvoted();
-				}
+		PostView out = p.getPostView();
+		Vote v = p.votes.stream().filter(vote -> vote.voterId == userId).findFirst().orElse(null);
+		if(v != null){
+			if(v.upvote){
+				out.setUpvoted();
+			}else{
+				out.setDownvoted();
 			}
-			return out;
 		}
+		return out;
 	}
 
-	public static PostViewShort getPostViewShortWithId(int postId){
-		Post p = getPostWithId(postId);
-		if(p == null){
-			return null;
-		}else{
-			return p.getPostViewShort();
-		}
+	public static PostViewShort getPostViewShortWithId(int postId) throws NonexistentPostException{
+		return getPostWithId(postId).getPostViewShort();
 	}
 
-	public static List<Comment> getComments(int postId){
+	public static List<Comment> getComments(int postId) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
-		if(p == null){
-			return new LinkedList<>();
-		}
 		return Collections.unmodifiableList(p.comments);
 	}
 
-	public static ErrorMessage vote(int postId, int userId, boolean upvote){
+	public static ErrorMessage vote(int postId, int userId, boolean upvote) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
-		if(p == null) {
-			return ErrorMessage.InvalidPostId;
-		}
 		if(p.authorId == userId){
 			return ErrorMessage.VoterIsAuthor;
 		}
@@ -171,21 +159,15 @@ public class ServerData {
 		return ErrorMessage.Success;
 	}
 
-	public static ErrorMessage addComment(int postId, int userId, String text){
+	public static ErrorMessage addComment(int postId, int userId, String text) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
-		if(p == null){
-			return ErrorMessage.InvalidPostId;
-		}
 		p.comments.add(new Comment(userId, text));
 		return ErrorMessage.Success;
 	}
 
-	public static ErrorMessage deletePost(int postId, int userId){
-		Post p = getPostWithId(postId);
-		if(p == null){
-			return ErrorMessage.InvalidPostId;
-		}
-		if(p.authorId != userId){
+	public static ErrorMessage deletePost(int postId, int userId) throws NonexistentPostException{
+		Post p = getPostWithId(postId, false);
+		if(p.isRewin ? p.rewinnerId != userId : p.authorId != userId){
 			return ErrorMessage.UserNotAuthor;
 		}
 
@@ -193,8 +175,18 @@ public class ServerData {
 		return ErrorMessage.Success;
 	}
 
+	public static ErrorMessage rewin(int rewinnerId, int postId) throws NonexistentPostException{
+		Post p = getPostWithId(postId);
+		posts.add(p.makeRewin(rewinnerId));
+		return ErrorMessage.Success;
+	}
+
 
 	public static void saveToDisk(){
+		File dir = new File("./data/");
+		if (!dir.exists()){
+			dir.mkdirs();
+		}
 		saveUsers();
 		saveFollows();
 		savePosts();
@@ -202,7 +194,7 @@ public class ServerData {
 
 	private static void saveUsers(){
 		System.out.println("Writing users to disk...");
-		String pathname = "./users.json";
+		String pathname = "./data/users.json";
 		Path path = Paths.get(pathname);
 		try {
 			try {
@@ -229,7 +221,7 @@ public class ServerData {
 
 	private static void saveFollows(){
 		System.out.println("Writing follows to disk...");
-		String pathname = "./follows.json";
+		String pathname = "./data/follows.json";
 		Path path = Paths.get(pathname);
 		try {
 			try {
@@ -252,7 +244,7 @@ public class ServerData {
 
 	private static void savePosts(){
 		System.out.println("Writing posts to disk...");
-		String pathname = "./posts.json";
+		String pathname = "./data/posts.json";
 		Path path = Paths.get(pathname);
 		try {
 			try {
@@ -284,7 +276,7 @@ public class ServerData {
 
 	private static void loadUsers(){
 		System.out.println("Loading users from disk...");
-		String pathname = "./users.json";
+		String pathname = "./data/users.json";
 		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
 			reader.beginArray();
 			reader.beginArray();
@@ -304,7 +296,7 @@ public class ServerData {
 
 	private static void loadFollows(){
 		System.out.println("Loading follows from disk...");
-		String pathname = "./follows.json";
+		String pathname = "./data/follows.json";
 		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
 			reader.beginArray();
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -321,7 +313,7 @@ public class ServerData {
 
 	private static void loadPosts(){
 		System.out.println("Loading posts from disk...");
-		String pathname = "./posts.json";
+		String pathname = "./data/posts.json";
 		try (JsonReader reader = new JsonReader(new InputStreamReader(new FileInputStream(pathname)))){
 			reader.beginArray();
 			reader.beginArray();

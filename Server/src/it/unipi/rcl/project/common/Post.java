@@ -16,28 +16,31 @@ public class Post implements Serializable {
 	public final String text;
 	public final boolean isRewin;
 	public final int rewinID;
+	public final int rewinnerId;
 	public final List<Vote> votes;
 	public final List<Comment> comments;
 	public final long timestamp;
 
-	public Post(User author, String title, String text){
-		this.authorId = author.id;
+	public Post(int authorId, String title, String text){
+		this.authorId = authorId;
 		this.title = title;
 		this.text = text;
 		this.isRewin = false;
 		this.rewinID = -1;
+		this.rewinnerId = -1;
 		this.id = getNewID();
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
 		this.timestamp = System.currentTimeMillis();
 	}
 
-	public Post(User author, int rewinID){
-		this.authorId = author.id;
-		this.title = null;
+	public Post(int authorId, int rewinID, int rewinnerId, String title){
+		this.authorId = authorId;
+		this.title = title;
 		this.text = null;
 		this.isRewin = true;
 		this.rewinID = rewinID;
+		this.rewinnerId = rewinnerId;
 		this.id = getNewID();
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
@@ -75,10 +78,14 @@ public class Post implements Serializable {
 	public PostView getPostView(){
 		int upvoteCount = getUpvoteCount();
 		int downvoteCount = votes.size() - upvoteCount;
-		return new PostView(this.id, this.authorId, this.title, this.text, upvoteCount, downvoteCount, this.comments, this.timestamp);
+		return new PostView(this.id, this.authorId, this.title, this.text, upvoteCount, downvoteCount, this.comments, this.timestamp, this.isRewin ? this.rewinnerId : -1);
 	}
 
 	public PostViewShort getPostViewShort(){
-		return new PostViewShort(this.id, this.authorId, this.title, this.timestamp);
+		return new PostViewShort(this.id, this.authorId, this.title, this.timestamp, this.isRewin ? this.rewinnerId : -1);
+	}
+
+	public Post makeRewin(int rewinnerId){
+		return new Post(this.authorId, this.id, rewinnerId, this.title);
 	}
 }

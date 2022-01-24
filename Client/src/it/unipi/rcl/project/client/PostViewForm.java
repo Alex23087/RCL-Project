@@ -1,11 +1,8 @@
 package it.unipi.rcl.project.client;
 
-import it.unipi.rcl.project.client.AppEventDelegate;
-import it.unipi.rcl.project.client.WinsomeForm;
 import it.unipi.rcl.project.common.Comment;
 import it.unipi.rcl.project.common.PostView;
 import it.unipi.rcl.project.common.PostViewShort;
-import it.unipi.rcl.project.server.ServerData;
 
 import javax.swing.*;
 
@@ -28,6 +25,7 @@ public class PostViewForm extends WinsomeForm {
 	private JTextField commentTextField;
 	private JButton commentButton;
 	private JButton deletePostButton;
+	private JButton rewinButton;
 	private PostView postView;
 
 	public PostViewForm(AppEventDelegate aed, PostViewShort postViewShort, boolean comingFromBlog) {
@@ -126,9 +124,20 @@ public class PostViewForm extends WinsomeForm {
 			});
 		});
 
-		if(postViewShort.authorId != ServerProxy.instance.userId) {
+		if(postViewShort.authorId != ServerProxy.instance.userId && postViewShort.rewinnerId != ServerProxy.instance.userId) {
 			deletePostButton.setVisible(false);
+			rewinButton.setVisible(true);
+			rewinButton.addActionListener(actionEvent -> {
+				rewinButton.setEnabled(false);
+				ServerProxy.instance.rewin(postViewShort.id, () -> {
+					AlertForm.successAlert("post.rewinned");
+				}, errorMessage -> {
+					rewinButton.setEnabled(true);
+					AlertForm.errorAlert();
+				});
+			});
 		}else{
+			rewinButton.setVisible(false);
 			deletePostButton.addActionListener(actionEvent -> {
 				ServerProxy.instance.deletePost(postViewShort.id, () -> {
 					AlertForm.successAlert("post.deleted");
@@ -142,6 +151,7 @@ public class PostViewForm extends WinsomeForm {
 				});
 			});
 		}
+
 		init();
 	}
 

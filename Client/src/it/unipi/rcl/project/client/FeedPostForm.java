@@ -10,6 +10,7 @@ public class FeedPostForm extends Form{
 	private JLabel titleLabel;
 	private JLabel usernameLabel;
 	public JPanel panel;
+	private JLabel rewinLabel;
 
 	public FeedPostForm (AppEventDelegate aed, PostViewShort post, boolean isBlog){
 		super(aed);
@@ -43,6 +44,14 @@ public class FeedPostForm extends Form{
 
 			}
 		});
+
+		if(post.rewinnerId != -1){
+			ServerProxy.instance.getUsernameFromId(post.rewinnerId, username -> {
+				rewinLabel.setText("(" + resourceBundle.getString("rewinned.by") + " " + username + ")");
+			}, errorMessage -> {
+				rewinLabel.setText("(" + resourceBundle.getString("rewinned.by") + " " + post.rewinnerId + ")");
+			});
+		}
 	}
 
 	@Override
