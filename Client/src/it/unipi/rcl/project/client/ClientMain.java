@@ -28,7 +28,7 @@ public class ClientMain {
 
 		    @Override
 			public void onLoginComplete() {
-				ServerProxy.instance.getFollowed(f -> {}, em -> {});
+				ServerProxy.instance.listFollowing(f -> {}, em -> {});
 				onFeedTransition();
 			}
 

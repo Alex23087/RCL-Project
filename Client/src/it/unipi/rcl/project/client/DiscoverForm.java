@@ -95,7 +95,7 @@ public class DiscoverForm extends WinsomeForm{
 			followButton.addActionListener(actionEvent -> {
 				followButton.setEnabled(false);
 				if(isFollowed){
-					ServerProxy.instance.unfollow(user.first, () -> {
+					ServerProxy.instance.unfollowUser(user.first, () -> {
 						followButton.setText(resourceBundle.getString("follow"));
 						isFollowed = false;
 						followButton.setEnabled(true);
@@ -111,7 +111,7 @@ public class DiscoverForm extends WinsomeForm{
 						followButton.setEnabled(true);
 					});
 				}else{
-					ServerProxy.instance.follow(user.first, () -> {
+					ServerProxy.instance.followUser(user.first, () -> {
 						followButton.setText(resourceBundle.getString("unfollow"));
 						isFollowed = true;
 						followButton.setEnabled(true);

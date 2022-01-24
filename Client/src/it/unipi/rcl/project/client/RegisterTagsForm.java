@@ -25,6 +25,8 @@ public class RegisterTagsForm {
 		frame.setSize(500, 500);
 		frame.setTitle("");
 
+		Form.centerFrame(frame);
+
 		acceptButton.addActionListener(actionEvent -> {
 			List<String> tags = new ArrayList<>(5);
 			addConditionally(textField1, tags);

@@ -21,6 +21,8 @@ public class ServerData {
 	static List<User> loggedUsers;
 	static List<Post> posts;
 	static List<Pair<Integer, Integer>> follows; //First element is followerID, second element is followedID
+	static Map<ConfigurationParameter, Object> conf = Utils.readConfFile("./conf.conf");
+
 
 	static{
 		users = new ConcurrentHashMap<>();
@@ -161,6 +163,9 @@ public class ServerData {
 
 	public static ErrorMessage addComment(int postId, int userId, String text) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
+		if(p.authorId == userId){
+			return ErrorMessage.CommentingOwnPost;
+		}
 		p.comments.add(new Comment(userId, text));
 		return ErrorMessage.Success;
 	}

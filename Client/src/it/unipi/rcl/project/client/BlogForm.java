@@ -3,6 +3,8 @@ package it.unipi.rcl.project.client;
 import it.unipi.rcl.project.common.PostViewShort;
 
 import javax.swing.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.List;
 
 public class BlogForm extends WinsomeForm {
@@ -24,35 +26,73 @@ public class BlogForm extends WinsomeForm {
 		String textHint = resourceBundle.getString("post.text") + " ";
 		String titleHint = resourceBundle.getString("post.title") + " ";
 
-		ServerProxy.instance.getPosts(posts -> {
+		ServerProxy.instance.viewBlog(posts -> {
 			this.posts = posts;
-			scrollPane.setViewportView(makePanelWithPostViews(posts, true));
+			if(posts.size() > 0) {
+				scrollPane.setViewportView(makePanelWithPostViews(posts, true));
+			}else{
+				scrollPane.setViewportView(new JLabel(makeWrappedText(appEventDelegate.getFrameWidth() - 50, resourceBundle.getString("blog.no.posts"))));
+			}
 		}, errorMessage -> {});
 
 		postButton.addActionListener(actionEvent -> {
-			if(textField.getText().equals(textHint)){
-				new AlertForm("error", "post.error.text", "ok");
-			}else if(titleField.getText().equals(titleHint)){
+			String postText = textField.getText();
+			String postTitle = titleField.getText();
+
+			if(postTitle.equals(titleHint)){
 				new AlertForm("error", "post.error.title", "ok");
-			}else{
-				postButton.setEnabled(false);
-				ServerProxy.instance.createPost(titleField.getText().strip(), textField.getText().strip(), id -> {
-					new AlertForm("success", "post.successful", "ok");
-					titleField.setText(titleHint);
-					textField.setText(textHint);
-					postButton.setEnabled(true);
-					ServerProxy.instance.getPostViewFromId(id, postView -> {
-						posts.add(0, postView);
-						scrollPane.setViewportView(makePanelWithPostViews(posts, true));
-					}, errorMessage -> {});
-				}, errorMessage -> {
-					postButton.setEnabled(true);
-				});
+				return;
 			}
+			if(postText.equals(textHint)){
+				new AlertForm("error", "post.error.text", "ok");
+				return;
+			}
+			postTitle = postTitle.strip();
+			if(postTitle.length() > 20){
+				AlertForm.errorAlert("post.title.too.long");
+				return;
+			}
+			postText = postText.strip();
+			if(postText.length() > 500){
+				AlertForm.errorAlert("post.text.too.long");
+				return;
+			}
+
+			postButton.setEnabled(false);
+			ServerProxy.instance.createPost(titleField.getText().strip(), textField.getText().strip(), id -> {
+				new AlertForm("success", "post.successful", "ok");
+				titleField.setText(titleHint);
+				textField.setText(textHint);
+				postButton.setEnabled(true);
+				ServerProxy.instance.showPost(id, postView -> {
+					posts.add(0, postView);
+					scrollPane.setViewportView(makePanelWithPostViews(posts, true));
+				}, errorMessage -> {});
+			}, errorMessage -> {
+				postButton.setEnabled(true);
+			});
 		});
 
 		setHint(textField, textHint);
 		setHint(titleField, titleHint);
+
+		textField.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				if(textField.getText().length() >= 500){
+					e.consume();
+				}
+			}
+		});
+
+		titleField.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				if(titleField.getText().length() >= 20){
+					e.consume();
+				}
+			}
+		});
 
 		blogButton.setEnabled(false);
 		init();

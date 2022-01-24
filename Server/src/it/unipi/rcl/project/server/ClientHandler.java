@@ -6,7 +6,6 @@ import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
@@ -97,10 +96,13 @@ public class ClientHandler implements Runnable{
 						break;
 					}
 					case PublishPost: {
-						//TODO: error checking
-						int id = ServerData.addPost(user.id, cmd.parameters[0], cmd.parameters[1]);
-						ous.writeObject(id);
-						System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Created new post with id " + id);
+						if(cmd.parameters == null || cmd.parameters.length < 2 || cmd.parameters[0].length() > 20 || cmd.parameters[1].length() > 500){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+						} else {
+							int id = ServerData.addPost(user.id, cmd.parameters[0], cmd.parameters[1]);
+							ous.writeObject(id);
+							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Created new post with id " + id);
+						}
 						break;
 					}
 					case Rewin: {
@@ -233,12 +235,10 @@ public class ClientHandler implements Runnable{
 						break;
 					}
 				}
-			} catch (SocketException se){
+			} catch (IOException | ClassNotFoundException e){
 				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
 				ServerData.loggedUsers.remove(this.user);
 				break;
-			} catch (IOException | ClassNotFoundException e) {
-				e.printStackTrace();
 			}
 		}
 	}

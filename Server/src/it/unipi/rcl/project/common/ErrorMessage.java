@@ -3,6 +3,7 @@ package it.unipi.rcl.project.common;
 public enum ErrorMessage {
 	AlreadyFollowed,
 	AlreadyVoted,
+	CommentingOwnPost,
 	InvalidCommand,
 	InvalidPassword,
 	InvalidPostId,

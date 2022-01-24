@@ -1,8 +1,6 @@
 package it.unipi.rcl.project.client;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class BalanceForm extends WinsomeForm{
 	private JPanel panel;
@@ -17,8 +15,8 @@ public class BalanceForm extends WinsomeForm{
 	BalanceForm(AppEventDelegate aed) {
 		super(aed);
 
-		ServerProxy.instance.getBalance(balance -> balanceLabel.setText(balance + " WIN"), errorMessage -> {});
-		ServerProxy.instance.getBTCBalance(btcBalance -> btcLabel.setText(btcBalance + " BTC"), errorMessage -> {});
+		ServerProxy.instance.getWallet(balance -> balanceLabel.setText(balance + " WIN"), errorMessage -> {});
+		ServerProxy.instance.getWalletInBitcoin(btcBalance -> btcLabel.setText(btcBalance + " BTC"), errorMessage -> {});
 
 		init();
 	}

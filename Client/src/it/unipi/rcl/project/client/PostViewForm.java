@@ -26,6 +26,7 @@ public class PostViewForm extends WinsomeForm {
 	private JButton commentButton;
 	private JButton deletePostButton;
 	private JButton rewinButton;
+	private JPanel postCommentPanel;
 	private PostView postView;
 
 	public PostViewForm(AppEventDelegate aed, PostViewShort postViewShort, boolean comingFromBlog) {
@@ -39,7 +40,7 @@ public class PostViewForm extends WinsomeForm {
 		setHint(commentTextField, commentHint);
 
 		ServerProxy.instance.getUsernameFromId(postViewShort.authorId, username -> authorLabel.setText(username), errorMessage -> {});
-		ServerProxy.instance.getPostViewFromId(postViewShort.id, postView -> {
+		ServerProxy.instance.showPost(postViewShort.id, postView -> {
 			this.postView = postView;
 			upvoteLabel.setText(Integer.toString(postView.upvotes));
 			downvoteLabel.setText(Integer.toString(postView.downvotes));
@@ -61,7 +62,7 @@ public class PostViewForm extends WinsomeForm {
 				upvoteButton.addActionListener(actionEvent -> {
 					upvoteButton.setEnabled(false);
 					downvoteButton.setEnabled(false);
-					ServerProxy.instance.vote(postView.id, true, () -> {
+					ServerProxy.instance.ratePost(postView.id, true, () -> {
 						postView.setUpvoted();
 						postView.upvotes++;
 						upvoteLabel.setText(Integer.toString(postView.upvotes));
@@ -79,7 +80,7 @@ public class PostViewForm extends WinsomeForm {
 				downvoteButton.addActionListener(actionEvent -> {
 					upvoteButton.setEnabled(false);
 					downvoteButton.setEnabled(false);
-					ServerProxy.instance.vote(postView.id, false, () -> {
+					ServerProxy.instance.ratePost(postView.id, false, () -> {
 						postView.setDownvoted();
 						postView.downvotes++;
 						downvoteLabel.setText(Integer.toString(postView.downvotes));
@@ -113,7 +114,7 @@ public class PostViewForm extends WinsomeForm {
 
 			commentButton.setEnabled(false);
 			String commentText = commentTextField.getText().strip();
-			ServerProxy.instance.comment(postView.id, commentText, () -> {
+			ServerProxy.instance.addComment(postView.id, commentText, () -> {
 				postView.comments.add(0, new Comment(ServerProxy.instance.userId, commentText));
 				commentScrollPane.setViewportView(makePanelWithComments(postView.comments));
 				commentTextField.setText(commentHint);
@@ -124,12 +125,16 @@ public class PostViewForm extends WinsomeForm {
 			});
 		});
 
+		if(postViewShort.authorId == ServerProxy.instance.userId){
+			postCommentPanel.setVisible(false);
+		}
+
 		if(postViewShort.authorId != ServerProxy.instance.userId && postViewShort.rewinnerId != ServerProxy.instance.userId) {
 			deletePostButton.setVisible(false);
 			rewinButton.setVisible(true);
 			rewinButton.addActionListener(actionEvent -> {
 				rewinButton.setEnabled(false);
-				ServerProxy.instance.rewin(postViewShort.id, () -> {
+				ServerProxy.instance.rewinPost(postViewShort.id, () -> {
 					AlertForm.successAlert("post.rewinned");
 				}, errorMessage -> {
 					rewinButton.setEnabled(true);

@@ -29,6 +29,7 @@ public class ServerProxy{
 	public List<Integer> followers;
 	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 	private Runnable unknownExceptionHandler = () -> {};
+	private Map<ConfigurationParameter, Object> conf;
 
 	private final ExecutorService pool;
 
@@ -37,6 +38,7 @@ public class ServerProxy{
 		followed = Collections.synchronizedList(new LinkedList<>());
 		followers = Collections.synchronizedList(new LinkedList<>());
 		usernames = new HashMap<>();
+		conf = Utils.readConfFile("./conf.conf");
 	}
 
 	private boolean connectToRMIIfNeeded(){
@@ -49,7 +51,7 @@ public class ServerProxy{
 
 	private boolean connectToTCPIfNeeded(){
 		if(socket == null || !socket.isConnected()){
-			return connectToServerTCP("localhost", 6666);
+			return connectToServerTCP((String) conf.get(ConfigurationParameter.SERVER), (int) conf.get(ConfigurationParameter.TCPPORT));
 		}else{
 			return true;
 		}
@@ -72,8 +74,8 @@ public class ServerProxy{
 	private boolean connectToServerRMI(){
 		Registry registry;
 		try {
-			registry = LocateRegistry.getRegistry(Constants.registryPort);
-			signUpService = (ISignUpService) registry.lookup(Constants.signUpServiceName);
+			registry = LocateRegistry.getRegistry((String) conf.get(ConfigurationParameter.REGHOST), (Integer) conf.get(ConfigurationParameter.REGPORT));
+			signUpService = (ISignUpService) registry.lookup((String) conf.get(ConfigurationParameter.SIGNUP_SERVICE_NAME));
 		} catch (ConnectException ce) {
 			unknownExceptionHandler.run();
 			return false;
@@ -144,7 +146,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getPosts(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
+	public void viewBlog(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -165,7 +167,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFeed(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
+	public void showFeed(Callback<List<PostViewShort>> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -207,11 +209,11 @@ public class ServerProxy{
 		});
 	}
 
-	public void getBalance(Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
-		getBalance(false, successCallback, errorCallback);
+	public void getWallet(Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+		getWallet(false, successCallback, errorCallback);
 	}
 
-	public void getBalance(boolean forceUpdate, Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getWallet(boolean forceUpdate, Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
 		if(forceUpdate || balance == -1) {
 			pool.submit(() -> {
 				if (!connectToTCPIfNeeded() || user == null) {
@@ -236,7 +238,7 @@ public class ServerProxy{
 		}
 	}
 
-	public void getBTCBalance(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getWalletInBitcoin(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorCallback.run(ErrorMessage.UnknownError);
@@ -276,7 +278,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void follow(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void followUser(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -303,7 +305,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void unfollow(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void unfollowUser(int userId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -330,13 +332,14 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFollowers(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void listFollowers(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
 				return;
 			}
 
+			//TODO: cache
 			try{
 				ous.writeObject(new Command(Command.Operation.GetFollowers, null));
 				Object response = ois.readObject();
@@ -355,10 +358,15 @@ public class ServerProxy{
 		});
 	}
 
-	public void getFollowed(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void listFollowing(Callback<List<Integer>> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			if(followed != null && followed.size() > 0){
+				successCallback.run(followed);
 				return;
 			}
 
@@ -410,7 +418,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void getPostViewFromId(Integer postID, Callback<PostView> successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void showPost(Integer postID, Callback<PostView> successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -433,7 +441,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void vote(Integer postID, Boolean upvote, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void ratePost(Integer postID, Boolean upvote, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -459,7 +467,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void comment(Integer postID, String text, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void addComment(Integer postID, String text, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);
@@ -538,7 +546,7 @@ public class ServerProxy{
 		});
 	}
 
-	public void rewin(Integer postId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
+	public void rewinPost(Integer postId, Runnable successCallback, Callback<ErrorMessage> errorMessageCallback){
 		pool.submit(() -> {
 			if (!connectToTCPIfNeeded() || user == null) {
 				errorMessageCallback.run(ErrorMessage.UnknownError);

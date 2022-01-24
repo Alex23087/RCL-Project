@@ -1,6 +1,7 @@
-package it.unipi.rcl.project.server;
+package it.unipi.rcl.project.common;
 
 public enum ConfigurationParameter {
+	AUTHOR_REWARD,
 	SERVER,
 	TCPPORT,
 	UDPPORT,
@@ -8,5 +9,7 @@ public enum ConfigurationParameter {
 	MCASTPORT,
 	REGHOST,
 	REGPORT,
+	REWARD_INTERVAL,
+	SIGNUP_SERVICE_NAME,
 	TIMEOUT
 }

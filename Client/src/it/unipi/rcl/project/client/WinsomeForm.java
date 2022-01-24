@@ -23,7 +23,7 @@ public abstract class WinsomeForm extends Form{
 		getProfileButton().addActionListener(actionEvent -> appEventDelegate.onProfileTransition());
 
 		getProfileButton().setText(ServerProxy.instance.user);
-		ServerProxy.instance.getBalance(balance -> getBalanceButton().setText(balance + " WIN"), errorMessage -> {});
+		ServerProxy.instance.getWallet(balance -> getBalanceButton().setText(balance + " WIN"), errorMessage -> {});
 	}
 
 	protected abstract JButton getBalanceButton();

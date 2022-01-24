@@ -9,18 +9,16 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ServerMain {
 
     public static void main(String[] args) {
-        Map<ConfigurationParameter, Object> conf = Utils.readConfFile("./conf.conf");
 
         Registry registry;
         try {
-            int regport = (int) conf.get(ConfigurationParameter.REGPORT);
+            int regport = (int) ServerData.conf.get(ConfigurationParameter.REGPORT);
             System.out.println(regport);
             registry = LocateRegistry.createRegistry(regport);
         }catch (RemoteException re){
@@ -31,7 +29,7 @@ public class ServerMain {
         SignUpService sus = new SignUpService(ServerData.users);
         try {
             ISignUpService sustub = (ISignUpService) UnicastRemoteObject.exportObject(sus, 0);
-            registry.rebind(Constants.signUpServiceName, sustub);
+            registry.rebind((String) ServerData.conf.get(ConfigurationParameter.SIGNUP_SERVICE_NAME), sustub);
         }catch(RemoteException re){
             re.printStackTrace();
             return;
@@ -41,7 +39,7 @@ public class ServerMain {
         ExecutorService pool = Executors.newCachedThreadPool();
         ServerSocket socket;
         try {
-            socket = new ServerSocket((int) conf.get(ConfigurationParameter.TCPPORT));
+            socket = new ServerSocket((int) ServerData.conf.get(ConfigurationParameter.TCPPORT));
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -59,4 +57,6 @@ public class ServerMain {
             pool.submit(new ClientHandler(clientSocket));
         }
     }
+
+
 }

@@ -18,9 +18,13 @@ public class FeedForm extends WinsomeForm{
 	public FeedForm(AppEventDelegate appEventDelegate){
 		super(appEventDelegate);
 
-		ServerProxy.instance.getFeed(posts -> {
+		ServerProxy.instance.showFeed(posts -> {
 			this.posts = posts;
-			feedPane.setViewportView(makePanelWithPostViews(posts, false));
+			if(posts.size() > 0) {
+				feedPane.setViewportView(makePanelWithPostViews(posts, false));
+			}else{
+				feedPane.setViewportView(new JLabel(makeWrappedText(appEventDelegate.getFrameWidth() - 50, resourceBundle.getString("feed.no.posts"))));
+			}
 		}, errorMessage -> {});
 
 		init();
