@@ -20,6 +20,8 @@ public class Post implements Serializable {
 	public final List<Vote> votes;
 	public final List<Comment> comments;
 	public final long timestamp;
+	public int rewardIterations;
+	public double lastRewardCalculation;
 
 	public Post(int authorId, String title, String text){
 		this.authorId = authorId;
@@ -32,6 +34,8 @@ public class Post implements Serializable {
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
 		this.timestamp = System.currentTimeMillis();
+		this.rewardIterations = 0;
+		this.lastRewardCalculation = 0;
 	}
 
 	public Post(int authorId, int rewinID, int rewinnerId, String title){
@@ -45,6 +49,8 @@ public class Post implements Serializable {
 		this.votes = Collections.synchronizedList(new LinkedList<>());
 		this.comments = Collections.synchronizedList(new LinkedList<>());
 		this.timestamp = System.currentTimeMillis();
+		this.rewardIterations = 0;
+		this.lastRewardCalculation = 0;
 	}
 
 	private static synchronized int getNewID(){

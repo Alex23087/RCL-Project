@@ -6,7 +6,11 @@ import it.unipi.rcl.project.common.Pair;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -24,12 +28,14 @@ public class ServerProxy{
 	private ObjectOutputStream ous;
 	public String user = null;
 	public int userId = -1;
-	public long balance = -1;
+	public double balance = -1;
 	public List<Integer> followed;
 	public List<Integer> followers;
 	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 	private Runnable unknownExceptionHandler = () -> {};
 	private Map<ConfigurationParameter, Object> conf;
+	private MulticastSocket multicastSocket;
+	private Thread notificationThread;
 
 	private final ExecutorService pool;
 
@@ -39,6 +45,20 @@ public class ServerProxy{
 		followers = Collections.synchronizedList(new LinkedList<>());
 		usernames = new HashMap<>();
 		conf = Utils.readConfFile("./conf.conf");
+
+		notificationThread = new Thread(() -> {
+			DatagramPacket packet = new DatagramPacket(new byte[64], 64);
+			try {
+				multicastSocket.receive(packet);
+				String msg = new String(packet.getData(), StandardCharsets.UTF_8);
+				System.out.println(msg);
+				getWallet(true, l -> {}, e -> {});
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		connectToServerUDP();
 	}
 
 	private boolean connectToRMIIfNeeded(){
@@ -85,6 +105,17 @@ public class ServerProxy{
 		}
 		System.out.println("Connected to RMI service");
 		return true;
+	}
+
+	private void connectToServerUDP(){
+		try {
+			InetAddress group = InetAddress.getByName((String) conf.get(ConfigurationParameter.MULTICAST));
+			multicastSocket = new MulticastSocket((int) conf.get(ConfigurationParameter.MCASTPORT));
+			multicastSocket.joinGroup(group);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		notificationThread.start();
 	}
 
 	public void registerUnknownExceptionHandler(Runnable handler){
@@ -209,11 +240,11 @@ public class ServerProxy{
 		});
 	}
 
-	public void getWallet(Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getWallet(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
 		getWallet(false, successCallback, errorCallback);
 	}
 
-	public void getWallet(boolean forceUpdate, Callback<Long> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getWallet(boolean forceUpdate, Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
 		if(forceUpdate || balance == -1) {
 			pool.submit(() -> {
 				if (!connectToTCPIfNeeded() || user == null) {
@@ -223,7 +254,7 @@ public class ServerProxy{
 
 				try {
 					ous.writeObject(new Command(Command.Operation.GetBalance, null));
-					successCallback.run((long) ois.readObject());
+					successCallback.run((double) ois.readObject());
 					return;
 				} catch (ClassNotFoundException e) {
 					e.printStackTrace();

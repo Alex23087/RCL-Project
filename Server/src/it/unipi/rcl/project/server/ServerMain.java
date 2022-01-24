@@ -5,6 +5,8 @@ import it.unipi.rcl.project.common.*;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -45,7 +47,19 @@ public class ServerMain {
             return;
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(ServerData::saveToDisk));
+        RewardHandler rewardHandler;
+        try {
+            rewardHandler = new RewardHandler((int) ServerData.conf.get(ConfigurationParameter.REWARD_INTERVAL));
+        }catch(UnknownHostException | SocketException uhe){
+            uhe.printStackTrace();
+            return;
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            rewardHandler.stop();
+            ServerData.saveToDisk();
+        }));
+        rewardHandler.start();
 
         while(true){
             Socket clientSocket = null;
