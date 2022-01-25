@@ -12,13 +12,14 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.rmi.RemoteException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class ServerData {
-	static Map<String, User> users;
-	static List<User> loggedUsers;
+	static Map<Integer, User> users;
+	static Map<Integer, IFollowedCallbackService> loggedUsers;
 	static List<Post> posts;
 	static List<Pair<Integer, Integer>> follows; //First element is followerID, second element is followedID
 	static Map<ConfigurationParameter, Object> conf = Utils.readConfFile("./conf.conf");
@@ -26,7 +27,7 @@ public class ServerData {
 
 	static{
 		users = new ConcurrentHashMap<>();
-		loggedUsers = Collections.synchronizedList(new LinkedList<>());
+		loggedUsers = new ConcurrentHashMap<>();
 		posts = Collections.synchronizedList(new LinkedList<>());
 		follows = Collections.synchronizedList(new LinkedList<>());
 		loadFromDisk();
@@ -37,7 +38,8 @@ public class ServerData {
 	}
 
 	public static void addUser(String username, String password, String[] tags){
-		users.put(username, new User(username, Utils.hashString(password), tags));
+		User newUser = new User(username, Utils.hashString(password), tags);
+		users.put(newUser.id, newUser);
 		System.out.println("New user with username " + username + " successfully registered to the platform");
 	}
 
@@ -61,12 +63,7 @@ public class ServerData {
 	}
 
 	public static int getUserId(String username){
-		User u = users.get(username);
-		if(u == null){
-			return -1;
-		}else{
-			return u.id;
-		}
+		return users.values().stream().filter(user -> user.username.equals(username)).map(user -> user.id).findFirst().orElse(-1);
 	}
 
 	public static boolean userFollows(int follower, int followed){
@@ -81,6 +78,14 @@ public class ServerData {
 			return false;
 		}else{
 			follows.add(new Pair<>(follower, followed));
+			IFollowedCallbackService fcs = loggedUsers.get(followed);
+			if(fcs != null){
+				try {
+					fcs.notifyFollow(follower);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			}
 			return true;
 		}
 	}
@@ -94,6 +99,14 @@ public class ServerData {
 			Pair<Integer, Integer> f = i.next();
 			if(f.first == follower && f.second == followed){
 				i.remove();
+				IFollowedCallbackService fcs = loggedUsers.get(followed);
+				if(fcs != null){
+					try {
+						fcs.notifyUnfollow(follower);
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					}
+				}
 				return true;
 			}
 		}
@@ -125,7 +138,7 @@ public class ServerData {
 		return getPostWithId(postId, true);
 	}
 
-		public static PostView getPostViewWithId(int postId, int userId) throws NonexistentPostException{
+	public static PostView getPostViewWithId(int postId, int userId) throws NonexistentPostException{
 		Post p = getPostWithId(postId);
 		PostView out = p.getPostView();
 		Vote v = p.votes.stream().filter(vote -> vote.voterId == userId).findFirst().orElse(null);
@@ -186,6 +199,15 @@ public class ServerData {
 		return ErrorMessage.Success;
 	}
 
+	public static boolean isLoggedIn(String username){
+		int userId = getUserId(username);
+		return loggedUsers.containsKey(userId);
+	}
+
+	public static void logout(int userId){
+		loggedUsers.remove(userId);
+	}
+
 
 	public static void saveToDisk(){
 		File dir = new File("./data/");
@@ -210,9 +232,9 @@ public class ServerData {
 			writer.setIndent("\t");
 			writer.beginArray();
 			writer.beginArray();
-			String[] usernames = users.keySet().toArray(new String[]{});
-			for(int i = 0; i < usernames.length; i++) {
-				gson.toJson(users.get(usernames[i]), User.class, writer);
+			Integer[] userIds = users.keySet().toArray(new Integer[]{});
+			for(int i = 0; i < userIds.length; i++) {
+				gson.toJson(users.get(userIds[i]), User.class, writer);
 			}
 			writer.endArray();
 			gson.toJson(User.lastIDAssigned, Integer.class, writer);
@@ -288,7 +310,7 @@ public class ServerData {
 			Gson gson = new GsonBuilder().setPrettyPrinting().create();
 			while(reader.hasNext()){
 				User user = gson.fromJson(reader, User.class);
-				users.put(user.username, user);
+				users.put(user.id, user);
 			}
 			reader.endArray();
 			User.lastIDAssigned = gson.fromJson(reader, Integer.class);

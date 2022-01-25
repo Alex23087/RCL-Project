@@ -2,12 +2,14 @@ package it.unipi.rcl.project.server;
 
 import it.unipi.rcl.project.common.Command;
 import it.unipi.rcl.project.common.ErrorMessage;
+import it.unipi.rcl.project.common.IFollowedCallbackService;
 import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
+import java.rmi.RemoteException;
 import java.util.List;
 
 public class ClientHandler implements Runnable{
@@ -15,6 +17,7 @@ public class ClientHandler implements Runnable{
 	ObjectInputStream ois;
 	ObjectOutputStream ous;
 	User user;
+	IFollowedCallbackService dummyFCS;
 
 	public ClientHandler(Socket clientSocket){
 		this.client = clientSocket;
@@ -25,6 +28,17 @@ public class ClientHandler implements Runnable{
 			e.printStackTrace();
 		}
 		System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Connected");
+		dummyFCS = new IFollowedCallbackService() {
+			@Override
+			public void notifyFollow(int userId) throws RemoteException {
+
+			}
+
+			@Override
+			public void notifyUnfollow(int userId) throws RemoteException {
+
+			}
+		};
 	}
 
 	@Override
@@ -41,12 +55,12 @@ public class ClientHandler implements Runnable{
 				}
 				switch (cmd.op) {
 					case Login: {
-						if (user != null || ServerData.loggedUsers.stream().anyMatch(us -> us.username.equals(cmd.parameters[0]))) {
+						if (user != null || ServerData.isLoggedIn(cmd.parameters[0])) {
 							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + cmd.parameters[0] + ")]User already logged in");
 							ous.writeObject(ErrorMessage.UserAlreadyLoggedIn);
 							ous.flush();
 						} else {
-							User u = ServerData.users.get(cmd.parameters[0]);
+							User u = ServerData.getUser(ServerData.getUserId(cmd.parameters[0]));
 							if (u == null) {
 								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Invalid username \"" + cmd.parameters[0] + "\"");
 								ous.writeObject(ErrorMessage.InvalidUsername);
@@ -56,7 +70,7 @@ public class ClientHandler implements Runnable{
 								this.user = u;
 								ous.writeObject(u.id);
 								ous.flush();
-								ServerData.loggedUsers.add(u);
+								ServerData.loggedUsers.put(u.id, dummyFCS);
 							} else {
 								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Invalid password");
 								ous.writeObject(ErrorMessage.InvalidPassword);
@@ -155,6 +169,7 @@ public class ClientHandler implements Runnable{
 						try {
 							int postID = Integer.parseInt(cmd.parameters[0]);
 							PostView p = ServerData.getPostViewWithId(postID, user.id);
+							ous.reset();
 							ous.writeObject(p);
 						} catch (NumberFormatException nfe) {
 							ous.writeObject(ErrorMessage.InvalidCommand);
@@ -210,7 +225,7 @@ public class ClientHandler implements Runnable{
 						break;
 					}
 					case Logout: {
-						ServerData.loggedUsers.removeIf(u -> u.id == user.id);
+						ServerData.logout(user.id);
 						user = null;
 						ous.writeObject(ErrorMessage.Success);
 						break;
@@ -237,7 +252,7 @@ public class ClientHandler implements Runnable{
 				}
 			} catch (IOException | ClassNotFoundException e){
 				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
-				ServerData.loggedUsers.remove(this.user);
+				ServerData.logout(user.id);
 				break;
 			}
 		}

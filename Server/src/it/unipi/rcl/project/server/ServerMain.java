@@ -28,7 +28,7 @@ public class ServerMain {
             return;
         }
 
-        SignUpService sus = new SignUpService(ServerData.users);
+        SignUpService sus = new SignUpService();
         try {
             ISignUpService sustub = (ISignUpService) UnicastRemoteObject.exportObject(sus, 0);
             registry.rebind((String) ServerData.conf.get(ConfigurationParameter.SIGNUP_SERVICE_NAME), sustub);

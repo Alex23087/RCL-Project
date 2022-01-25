@@ -79,14 +79,14 @@ public class RewardHandler implements Runnable{
 
 	private Pair<Double, Set<Integer>> calculateRewardForPost(Post p){
 		p.rewardIterations++;
-		Stream<Vote> newPeopleLikes = p.votes.stream().filter(vote -> vote.timestamp >= p.lastRewardCalculation && vote.timestamp < calculationStartTimestamp);
-		Stream<Vote> oldPeopleLikes = p.votes.stream().filter(vote -> vote.timestamp < p.lastRewardCalculation);
-		List<Vote> newPeopleLikesList = newPeopleLikes.filter(vote1 -> oldPeopleLikes.noneMatch(vote2 -> vote1.voterId == vote2.voterId)).collect(Collectors.toList());
+		List<Vote> newPeopleLikes = p.votes.stream().filter(vote -> vote.timestamp >= p.lastRewardCalculation && vote.timestamp < calculationStartTimestamp).collect(Collectors.toList());
+		List<Vote> oldPeopleLikes = p.votes.stream().filter(vote -> vote.timestamp < p.lastRewardCalculation).collect(Collectors.toList());
+		List<Vote> newPeopleLikesList = newPeopleLikes.stream().filter(vote1 -> oldPeopleLikes.stream().noneMatch(vote2 -> vote1.voterId == vote2.voterId)).collect(Collectors.toList());
 		int newPeopleLikesCount = newPeopleLikesList.stream().reduce(0, (counter, vote) -> counter + (vote.upvote ? 1 : -1), Integer::sum);
 
-		Stream<Comment> newPeopleComments = p.comments.stream().filter(comment -> comment.timestamp >= p.lastRewardCalculation && comment.timestamp < calculationStartTimestamp);
-		Stream<Comment> oldPeopleComments = p.comments.stream().filter(comment -> comment.timestamp < p.lastRewardCalculation);
-		newPeopleComments = newPeopleComments.filter(comment1 -> oldPeopleComments.noneMatch(comment2 -> comment1.commenterId == comment2.commenterId));
+		List<Comment> newPeopleComments = p.comments.stream().filter(comment -> comment.timestamp >= p.lastRewardCalculation && comment.timestamp < calculationStartTimestamp).collect(Collectors.toList());
+		List<Comment> oldPeopleComments = p.comments.stream().filter(comment -> comment.timestamp < p.lastRewardCalculation).collect(Collectors.toList());
+		newPeopleComments = newPeopleComments.stream().filter(comment1 -> oldPeopleComments.stream().noneMatch(comment2 -> comment1.commenterId == comment2.commenterId)).collect(Collectors.toList());
 
 		Map<Integer, Integer> numberOfCommentsPerUser = new HashMap<>();
 		Iterator<Comment> commentIterator = newPeopleComments.iterator();

@@ -16,6 +16,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RemoteObject;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,9 +35,11 @@ public class ServerProxy{
 	public List<Integer> followers;
 	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 	private Runnable unknownExceptionHandler = () -> {};
+	private Callback<Integer> followedNotificationHandler = id -> {};
+	private Callback<Integer> unfollowedNotificationHandler = id -> {};
 	private Map<ConfigurationParameter, Object> conf;
 	private MulticastSocket multicastSocket;
-	private Thread notificationThread;
+	private final Thread notificationThread;
 
 	private final ExecutorService pool;
 
@@ -82,12 +86,12 @@ public class ServerProxy{
 			socket = new Socket(address, port);
 			ous = new ObjectOutputStream(socket.getOutputStream());
 			ois = new ObjectInputStream(socket.getInputStream());
+			System.out.println("Connected to server TCP");
 		} catch (IOException e) {
 			e.printStackTrace();
 			unknownExceptionHandler.run();
 			return false;
 		}
-		System.out.println("Connected to server TCP");
 		return true;
 	}
 
@@ -123,6 +127,13 @@ public class ServerProxy{
 			handler.run();
 			resetStatus();
 		};
+	}
+
+	public void registerFollowedNotificationHandler(Callback<Integer> handler){
+		followedNotificationHandler = handler;
+	}
+	public void registerUnfollowedNotificationHandler(Callback<Integer> handler){
+		unfollowedNotificationHandler = handler;
 	}
 
 	public void register(String username, String password, String[] tags, Runnable successCallback, Callback<ErrorMessage> errorCallback){
@@ -165,6 +176,7 @@ public class ServerProxy{
 				}else{
 					user = username;
 					userId = (int) response;
+					registerServerFollowerCallback();
 					successCallback.run();
 				}
 			} catch (ClassNotFoundException e) {
@@ -603,6 +615,22 @@ public class ServerProxy{
 		});
 	}
 
+	private void registerServerFollowerCallback(){
+		pool.submit(() -> {
+			if(!connectToRMIIfNeeded()){
+				return;
+			}
+
+			IFollowedCallbackService fcs = new FollowedCallbackServiceImpl();
+
+			try {
+				signUpService.registerFollowCallback((IFollowedCallbackService) UnicastRemoteObject.exportObject(fcs, 0), userId);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		});
+	}
+
 	private void resetStatus(){
 		user = null;
 		userId = -1;
@@ -616,5 +644,19 @@ public class ServerProxy{
 
 	public interface Callback<T> {
 		void run(T value);
+	}
+
+	class FollowedCallbackServiceImpl extends RemoteObject implements IFollowedCallbackService{
+		@Override
+		public void notifyFollow(int userId) throws RemoteException {
+			followers.add(userId);
+			followedNotificationHandler.run(userId);
+		}
+
+		@Override
+		public void notifyUnfollow(int userId) throws RemoteException {
+			followers.remove((Integer) userId);
+			unfollowedNotificationHandler.run(userId);
+		}
 	}
 }

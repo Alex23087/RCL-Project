@@ -38,4 +38,14 @@ public class AlertForm extends Form{
 	public static void successAlert(String message){
 		new AlertForm("success", message, "ok");
 	}
+
+	public static void followAlert(String username) {
+		AlertForm a = new AlertForm("notification", "followed.you", "ok");
+		a.textLabel.setText(username + " " + resourceBundle.getString("followed.you"));
+	}
+
+	public static void unfollowAlert(String username) {
+		AlertForm a = new AlertForm("notification", "unfollowed.you", "ok");
+		a.textLabel.setText(username + " " + resourceBundle.getString("unfollowed.you"));
+	}
 }

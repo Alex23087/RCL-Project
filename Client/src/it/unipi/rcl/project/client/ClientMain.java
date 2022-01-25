@@ -84,6 +84,14 @@ public class ClientMain {
 			AlertForm.errorAlert("connection.lost");
 		});
 
+	    ServerProxy.instance.registerFollowedNotificationHandler(userId -> {
+		    ServerProxy.instance.getUsernameFromId(userId, AlertForm::followAlert, errorMessage -> {});
+	    });
+
+	    ServerProxy.instance.registerUnfollowedNotificationHandler(userId -> {
+		    ServerProxy.instance.getUsernameFromId(userId, AlertForm::unfollowAlert, errorMessage -> {});
+	    });
+
 		aed.onLogout();
     }
 }

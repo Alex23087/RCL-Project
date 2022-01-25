@@ -41,12 +41,16 @@ public abstract class WinsomeForm extends Form{
 		return contents;
 	}
 
-	protected final JPanel makePanelWithComments(List<Comment> comments){
-		JPanel contents = new JPanel();
-		contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
-		for (Comment c: comments) {
-			contents.add(new CommentForm(appEventDelegate, c).getPanel());
+	protected final JComponent makePanelWithComments(List<Comment> comments){
+		if(comments != null && comments.size() > 0) {
+			JPanel contents = new JPanel();
+			contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
+			for (Comment c : comments) {
+				contents.add(new CommentForm(appEventDelegate, c).getPanel());
+			}
+			return contents;
+		}else{
+			return new JLabel(resourceBundle.getString("no.comments"));
 		}
-		return contents;
 	}
 }
