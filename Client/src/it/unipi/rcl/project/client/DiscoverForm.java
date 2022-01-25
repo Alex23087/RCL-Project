@@ -84,14 +84,17 @@ public class DiscoverForm extends WinsomeForm{
 
 			JButton followButton = new JButton();
 
-			isFollowed = ServerProxy.instance.followed.contains(user.first);
+			ServerProxy.instance.isFollowing(user.first, isFollowed -> {
+				this.isFollowed = isFollowed;
+				if(isFollowed){
+					followButton.setText(resourceBundle.getString("unfollow"));
+				}else {
+					followButton.setText(resourceBundle.getString("follow"));
+				}
+				followButton.setEnabled(true);
+			}, em -> {});
 
-			if(isFollowed){
-				followButton.setText(resourceBundle.getString("unfollow"));
-			}else {
-				followButton.setText(resourceBundle.getString("follow"));
-			}
-
+			followButton.setEnabled(false);
 			followButton.addActionListener(actionEvent -> {
 				followButton.setEnabled(false);
 				if(isFollowed){

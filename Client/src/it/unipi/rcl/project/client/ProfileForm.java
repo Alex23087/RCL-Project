@@ -13,14 +13,47 @@ public class ProfileForm extends WinsomeForm{
 	private JLabel usernameLabel;
 	private JLabel followedLabel;
 	private JLabel followersLabel;
+	private JScrollPane followersPane;
+	private JScrollPane followedPane;
 
 	public ProfileForm(AppEventDelegate aed) {
 		super(aed);
 		usernameLabel.setText(ServerProxy.instance.user);
-		followedLabel.setText(ServerProxy.instance.followed.size() + " " + resourceBundle.getString("followed"));
-		followersLabel.setText(ServerProxy.instance.followers.size() + " " + resourceBundle.getString("followers"));
+		ServerProxy.instance.getFollowerCount(count -> followersLabel.setText(count + " " + resourceBundle.getString("followers")), errorMessage -> {});
+		ServerProxy.instance.getFollowedCount(count -> followedLabel.setText(count + " " + resourceBundle.getString("followed")), errorMessage -> {});
 		logoutButton.addActionListener(actionEvent -> ServerProxy.instance.logout(aed::onLogout, errorMessage -> {}));
 		profileButton.setEnabled(false);
+
+		ServerProxy.instance.listFollowers(followers -> {
+			if(followers == null || followers.size() < 1){
+				followersPane.setViewportView(new JLabel(resourceBundle.getString("no.followers")));
+			}else{
+				JPanel contents = new JPanel();
+				contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
+				for(int userId: followers){
+					JLabel userLabel = new JLabel(Integer.toString(userId));
+					ServerProxy.instance.getUsernameFromId(userId, userLabel::setText, errorMessage -> {});
+					contents.add(userLabel);
+				}
+				followersPane.setViewportView(contents);
+			}
+		}, errorMessage -> {});
+
+		ServerProxy.instance.listFollowing(followed -> {
+			if(followed == null || followed.size() < 1){
+				followedPane.setViewportView(new JLabel(resourceBundle.getString("no.followed")));
+			}else{
+				JPanel contents = new JPanel();
+				contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
+				for(int userId: followed){
+					JLabel userLabel = new JLabel(Integer.toString(userId));
+					ServerProxy.instance.getUsernameFromId(userId, userLabel::setText, errorMessage -> {});
+					contents.add(userLabel);
+				}
+				followedPane.setViewportView(contents);
+			}
+		}, errorMessage -> {});
+		
 		init();
 	}
 

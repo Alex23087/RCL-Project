@@ -6,18 +6,22 @@ import it.unipi.rcl.project.common.IFollowedCallbackService;
 import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.rmi.RemoteException;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ClientHandler implements Runnable{
-	Socket client;
-	ObjectInputStream ois;
-	ObjectOutputStream ous;
-	User user;
-	IFollowedCallbackService dummyFCS;
+	private Socket client;
+	private ObjectInputStream ois;
+	private ObjectOutputStream ous;
+	private User user;
+	private IFollowedCallbackService dummyFCS;
+	private int btcFactor = -1;
 
 	public ClientHandler(Socket clientSocket){
 		this.client = clientSocket;
@@ -30,14 +34,9 @@ public class ClientHandler implements Runnable{
 		System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Connected");
 		dummyFCS = new IFollowedCallbackService() {
 			@Override
-			public void notifyFollow(int userId) throws RemoteException {
-
-			}
-
+			public void notifyFollow(int userId) throws RemoteException {}
 			@Override
-			public void notifyUnfollow(int userId) throws RemoteException {
-
-			}
+			public void notifyUnfollow(int userId) throws RemoteException {}
 		};
 	}
 
@@ -100,13 +99,17 @@ public class ClientHandler implements Runnable{
 						ous.writeObject(user.balance);
 						break;
 					}
+					case GetTransactions: {
+						ous.reset();
+						ous.writeObject(user.transactions.stream().sorted(Comparator.comparing(t -> -(t.timestamp))).collect(Collectors.toList()));
+						break;
+					}
 					case GetBTCConversion: {
-						URL randomURL = new URL("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new");
-						URLConnection connection = randomURL.openConnection();
-						BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-						int factor = Integer.parseInt(in.readLine());
-						in.close();
-						ous.writeObject(user.balance / (double) factor);
+						if(btcFactor == -1){
+							updateBtcFactor();
+						}
+						ous.writeObject(user.balance / (double) btcFactor);
+						updateBtcFactor();
 						break;
 					}
 					case PublishPost: {
@@ -148,6 +151,11 @@ public class ClientHandler implements Runnable{
 					}
 					case GetFollowed: {
 						List<Integer> l = ServerData.getFollowed(user.id);
+						ous.writeObject(l);
+						break;
+					}
+					case GetFollowers: {
+						List<Integer> l = ServerData.getFollowers(user.id);
 						ous.writeObject(l);
 						break;
 					}
@@ -253,9 +261,22 @@ public class ClientHandler implements Runnable{
 			} catch (IOException | ClassNotFoundException e){
 				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
 				ServerData.logout(user.id);
+				try {
+					ous.close();
+					ois.close();
+					client.close();
+				} catch (IOException ignored) {}
 				break;
 			}
 		}
+	}
+
+	private void updateBtcFactor() throws IOException {
+		URL randomURL = new URL("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new");
+		URLConnection connection = randomURL.openConnection();
+		BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		btcFactor = Integer.parseInt(in.readLine());
+		in.close();
 	}
 
 	private void log(String msg){

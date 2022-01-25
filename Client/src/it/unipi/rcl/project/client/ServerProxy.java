@@ -31,8 +31,8 @@ public class ServerProxy{
 	public String user = null;
 	public int userId = -1;
 	public double balance = -1;
-	public List<Integer> followed;
-	public List<Integer> followers;
+	private List<Integer> followed;
+	private List<Integer> followers;
 	private final Map<Integer, String> usernames; //Contains the associations between user ids and usernames
 	private Runnable unknownExceptionHandler = () -> {};
 	private Callback<Integer> followedNotificationHandler = id -> {};
@@ -56,7 +56,7 @@ public class ServerProxy{
 				multicastSocket.receive(packet);
 				String msg = new String(packet.getData(), StandardCharsets.UTF_8);
 				System.out.println(msg);
-				getWallet(true, l -> {}, e -> {});
+				getBalance(true, l -> {}, e -> {});
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -252,11 +252,11 @@ public class ServerProxy{
 		});
 	}
 
-	public void getWallet(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
-		getWallet(false, successCallback, errorCallback);
+	public void getBalance(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
+		getBalance(false, successCallback, errorCallback);
 	}
 
-	public void getWallet(boolean forceUpdate, Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
+	public void getBalance(boolean forceUpdate, Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
 		if(forceUpdate || balance == -1) {
 			pool.submit(() -> {
 				if (!connectToTCPIfNeeded() || user == null) {
@@ -266,7 +266,8 @@ public class ServerProxy{
 
 				try {
 					ous.writeObject(new Command(Command.Operation.GetBalance, null));
-					successCallback.run((double) ois.readObject());
+					balance = (double) ois.readObject();
+					successCallback.run(balance);
 					return;
 				} catch (ClassNotFoundException e) {
 					e.printStackTrace();
@@ -279,6 +280,27 @@ public class ServerProxy{
 		}else{
 			successCallback.run(balance);
 		}
+	}
+
+	public void getTransactions(Callback<List<Transaction>> successCallback, Callback<ErrorMessage> errorCallback){
+		pool.submit(() -> {
+			if (!connectToTCPIfNeeded() || user == null) {
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			}
+
+			try {
+				ous.writeObject(new Command(Command.Operation.GetTransactions, null));
+				successCallback.run((List<Transaction>) ois.readObject());
+				return;
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+				errorCallback.run(ErrorMessage.UnknownError);
+				return;
+			} catch (IOException e) {
+				unknownExceptionHandler.run();
+			}
+		});
 	}
 
 	public void getWalletInBitcoin(Callback<Double> successCallback, Callback<ErrorMessage> errorCallback){
@@ -382,15 +404,19 @@ public class ServerProxy{
 				return;
 			}
 
-			//TODO: cache
+			if(followers != null && followers.size() > 0){
+				successCallback.run(followers);
+				return;
+			}
+
 			try{
 				ous.writeObject(new Command(Command.Operation.GetFollowers, null));
 				Object response = ois.readObject();
 				if(response instanceof ErrorMessage){
 					errorMessageCallback.run((ErrorMessage) response);
 				}else{
-					followed = (List<Integer>) response;
-					successCallback.run(followed);
+					followers = (List<Integer>) response;
+					successCallback.run(followers);
 				}
 			}catch (ClassNotFoundException ioe){
 				ioe.printStackTrace();
@@ -629,6 +655,18 @@ public class ServerProxy{
 				e.printStackTrace();
 			}
 		});
+	}
+
+	public void isFollowing(int userId, Callback<Boolean> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> listFollowers(followers -> successCallback.run(followers.contains(userId)), errorMessageCallback));
+	}
+
+	public void getFollowerCount(Callback<Integer> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> listFollowers(followers -> successCallback.run(followers.size()), errorMessageCallback));
+	}
+
+	public void getFollowedCount(Callback<Integer> successCallback, Callback<ErrorMessage> errorMessageCallback){
+		pool.submit(() -> listFollowing(followed -> successCallback.run(followed.size()), errorMessageCallback));
 	}
 
 	private void resetStatus(){

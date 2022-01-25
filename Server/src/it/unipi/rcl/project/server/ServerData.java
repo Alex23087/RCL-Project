@@ -114,15 +114,11 @@ public class ServerData {
 	}
 
 	public static List<Integer> getFollowed(int userId){
-		/*List<String> followed = new ArrayList<>();
-		for(Pair<Integer, Integer> f: follows){
-			if(f.first != userId){
-				continue;
-			}
-			followed.add(getUser(f.second).username);
-		}
-		return followed;*/
 		return follows.stream().filter(f -> f.first == userId).map(p -> getUser(p.second).id).collect(Collectors.toList());
+	}
+
+	public static List<Integer> getFollowers(int userId){
+		return follows.stream().filter(f -> f.second == userId).map(p -> getUser(p.first).id).collect(Collectors.toList());
 	}
 
 	public static Post getPostWithId(int postId, boolean recursive) throws NonexistentPostException{

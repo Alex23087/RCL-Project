@@ -16,6 +16,7 @@ public class Command implements Serializable {
 		GetPosts,
 		GetPostViewFromId,
 		GetUsernameFromId,
+		GetTransactions,
 		ListUsers,
 		Login,
 		Logout,

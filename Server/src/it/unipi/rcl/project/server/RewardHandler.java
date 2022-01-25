@@ -40,6 +40,10 @@ public class RewardHandler implements Runnable{
 				return;
 			}
 			Pair<Double, Set<Integer>> calculationResult = calculateRewardForPost(post);
+			if(calculationResult.first == 0d){
+				return;
+			}
+
 			double authorQuota = calculationResult.first / 100d * authorPercentage;
 			double curatorQuota = (calculationResult.first - authorQuota) / calculationResult.second.size();
 
@@ -54,7 +58,7 @@ public class RewardHandler implements Runnable{
 
 		rewardsPerUser.forEach((userId, amount) -> {
 			User u = ServerData.getUser(userId);
-			u.transactions.add(new Transaction(amount));
+			u.transactions.add(0, new Transaction(amount));
 			u.balance += amount;
 		});
 
