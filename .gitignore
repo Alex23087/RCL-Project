@@ -138,3 +138,5 @@
 Server/*.json
 Server/data/*.json
 Server/olddata/*.json
+build/
+Server/compiling.txt

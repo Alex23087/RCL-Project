@@ -3,31 +3,36 @@ package it.unipi.rcl.project.common;
 import java.io.Serializable;
 import java.util.Arrays;
 
+/**
+ * Class to encode the commands the client sends to the server
+ */
+
 public class Command implements Serializable {
-	public enum Operation{
+	public enum Operation{ //API commands
 		AddComment,
+		CreatePost,
 		DeletePost,
-		Follow,
+		FollowUser,
 		GetBalance,
-		GetBTCConversion,
-		GetFeed,
-		GetFollowed,
-		GetFollowers,
-		GetPosts,
-		GetPostViewFromId,
-		GetUsernameFromId,
+		GetBalanceInBTC,
 		GetTransactions,
+		GetUsernameFromId,
+		ListFollowers,
+		ListFollowing,
 		ListUsers,
 		Login,
 		Logout,
-		PublishPost,
-		Rewin,
-		Unfollow,
-		Vote
+		RatePost,
+		RewinPost,
+		ShowFeed,
+		ShowPost,
+		UnfollowUser,
+		ViewBlog
 	}
 
 	public Operation op;
-	public String[] parameters;
+	public String[] parameters; //Null or empty if the command doesn't require parameters
+
 
 	public Command(Operation op, String[] parameters){
 		this.op = op;

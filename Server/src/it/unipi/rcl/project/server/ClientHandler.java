@@ -6,7 +6,6 @@ import it.unipi.rcl.project.common.IFollowedCallbackService;
 import it.unipi.rcl.project.common.PostView;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
@@ -15,13 +14,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Class that handles the communication with a single client
+ */
 public class ClientHandler implements Runnable{
-	private Socket client;
+	private final Socket client;
 	private ObjectInputStream ois;
 	private ObjectOutputStream ous;
 	private User user;
-	private IFollowedCallbackService dummyFCS;
+	//Factor used to calculate the conversion between WIN and BTC
 	private int btcFactor = -1;
+	//Dummy object used to avoid storing null values into a Map
+	private static final IFollowedCallbackService dummyFCS = new IFollowedCallbackService() {
+		@Override
+		public void notifyFollow(int userId) throws RemoteException {}
+		@Override
+		public void notifyUnfollow(int userId) throws RemoteException {}
+	};
+
 
 	public ClientHandler(Socket clientSocket){
 		this.client = clientSocket;
@@ -31,80 +41,98 @@ public class ClientHandler implements Runnable{
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Connected");
-		dummyFCS = new IFollowedCallbackService() {
-			@Override
-			public void notifyFollow(int userId) throws RemoteException {}
-			@Override
-			public void notifyUnfollow(int userId) throws RemoteException {}
-		};
+		log("Connected");
 	}
 
 	@Override
 	public void run() {
-		while (true) {
+		while (true) { //Keep looping as long as the client is connected
 			try {
 				Command cmd = (Command) ois.readObject();
-				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Received " + cmd);
+				log("Received " + cmd);
+				//If the user is not logged in yet and tries to issue any command that's not Login
 				if (user == null && (cmd.op != Command.Operation.Login)) {
-					System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]User not logged in");
+					log("User not logged in");
 					ous.writeObject(ErrorMessage.UserNotLoggedIn);
-					ous.flush();
 					continue;
 				}
 				switch (cmd.op) {
-					case Login: {
-						if (user != null || ServerData.isLoggedIn(cmd.parameters[0])) {
-							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + cmd.parameters[0] + ")]User already logged in");
-							ous.writeObject(ErrorMessage.UserAlreadyLoggedIn);
-							ous.flush();
+					case AddComment: { //parameters[0] = postId, parameter[1] = text
+						if(cmd.parameters == null || cmd.parameters.length < 2){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
 						} else {
-							User u = ServerData.getUser(ServerData.getUserId(cmd.parameters[0]));
-							if (u == null) {
-								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Invalid username \"" + cmd.parameters[0] + "\"");
-								ous.writeObject(ErrorMessage.InvalidUsername);
-								ous.flush();
-							} else if (u.password.equals(cmd.parameters[1])) {
-								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Logged in as " + u.username);
-								this.user = u;
-								ous.writeObject(u.id);
-								ous.flush();
-								ServerData.loggedUsers.put(u.id, dummyFCS);
-							} else {
-								System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "]Invalid password");
-								ous.writeObject(ErrorMessage.InvalidPassword);
-								ous.flush();
+							try {
+								int postId = Integer.parseInt(cmd.parameters[0]);
+								String text = cmd.parameters[1];
+								ous.writeObject(ServerData.addComment(postId, user.id, text));
+								log("Commented to post " + postId);
+							}catch (NumberFormatException nfe){
+								ous.writeObject(ErrorMessage.InvalidCommand);
+								log("Invalid parameters");
+							} catch (NonexistentPostException e) {
+								ous.writeObject(ErrorMessage.InvalidPostId);
+								log("Invalid postId");
 							}
 						}
 						break;
 					}
-					case GetFeed: {
-						ous.writeObject(ServerData.getFeed(user));
+					case CreatePost: { //parameters[0] = title, parameters[1] = text
+						//Check if both title and text have been passed and if they are not too long
+						if(cmd.parameters == null || cmd.parameters.length < 2 || cmd.parameters[0].length() > 20 || cmd.parameters[1].length() > 500){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
+						} else {
+							int id = ServerData.addPost(user.id, cmd.parameters[0], cmd.parameters[1]);
+							ous.writeObject(id);
+						}
 						break;
 					}
-					case GetPosts: {
-						if (cmd.parameters == null) {
-							ous.writeObject(ServerData.getPosts(user));
-						} else {
-							User u = ServerData.getUser(Integer.parseInt(cmd.parameters[0]));
-							if (u == null) {
-								ous.writeObject(ErrorMessage.NoSuchUser);
-							} else {
-								ous.writeObject(ServerData.getPosts(u));
+					case DeletePost: { //parameters[0] = postId
+						if(cmd.parameters == null || cmd.parameters.length < 1){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
+						}else{
+							try{
+								int postId = Integer.parseInt(cmd.parameters[0]);
+								ous.writeObject(ServerData.deletePost(postId, user.id));
+							} catch (NumberFormatException nfe){
+								ous.writeObject(ErrorMessage.InvalidCommand);
+								log("Invalid parameters");
+							} catch (NonexistentPostException e) {
+								ous.writeObject(ErrorMessage.InvalidPostId);
+								log("Invalid postId");
 							}
 						}
 						break;
 					}
-					case GetBalance: {
+					case FollowUser: { //parameters[0] = userId of the person the user will be following
+						if(cmd.parameters == null || cmd.parameters.length < 1){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
+						}else {
+							try {
+								int followedId = Integer.parseInt(cmd.parameters[0]);
+								ous.writeObject(ServerData.follow(user.id, followedId));
+							} catch (NumberFormatException nfe) {
+								ous.writeObject(ErrorMessage.InvalidUserId);
+								log("Passed invalid userId");
+							}
+						}
+						break;
+					}
+					case GetBalance: { //No parameters
 						ous.writeObject(user.balance);
 						break;
 					}
-					case GetTransactions: {
-						ous.reset();
-						ous.writeObject(user.transactions.stream().sorted(Comparator.comparing(t -> -(t.timestamp))).collect(Collectors.toList()));
-						break;
-					}
-					case GetBTCConversion: {
+					case GetBalanceInBTC: { //No parameters
+						/**
+						 * The factor used to get the BTC conversion is not calculated on demand, otherwise
+						 * the client might experience delays while the server connects to the random.org page.
+						 * It is instead stored in a field and calculated after fulfilling the request
+						 * (this behaviour is only visible from the second invocation on,
+						 * the first invocation will request it on demand, and then request the next one)
+						 */
 						if(btcFactor == -1){
 							updateBtcFactor();
 						}
@@ -112,97 +140,83 @@ public class ClientHandler implements Runnable{
 						updateBtcFactor();
 						break;
 					}
-					case PublishPost: {
-						if(cmd.parameters == null || cmd.parameters.length < 2 || cmd.parameters[0].length() > 20 || cmd.parameters[1].length() > 500){
-							ous.writeObject(ErrorMessage.InvalidCommand);
-						} else {
-							int id = ServerData.addPost(user.id, cmd.parameters[0], cmd.parameters[1]);
-							ous.writeObject(id);
-							System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Created new post with id " + id);
-						}
+					case GetTransactions: { //No parameters
+						/**
+						 * The output stream is reset in order to avoid the ObjectStreams caching the list and not
+						 * sending the updated version of the list
+						 */
+						ous.reset();
+						ous.writeObject(user.transactions);
 						break;
 					}
-					case Rewin: {
-						try {
-							ErrorMessage errorMessage = ServerData.rewin(user.id, Integer.parseInt(cmd.parameters[0]));
-							ous.writeObject(errorMessage);
-						} catch (NonexistentPostException npe){
-							ous.writeObject(ErrorMessage.InvalidPostId);
-						}
-						break;
-					}
-					case ListUsers: {
-						ous.writeObject(ServerData.getUsersWithTags(user.tags));
-						break;
-					}
-					case Follow: {
-						try {
-							int followedId = Integer.parseInt(cmd.parameters[0]);
-							if (ServerData.follow(user.id, followedId)) {
-								ous.writeObject(ErrorMessage.Success);
-							} else {
-								ous.writeObject(ErrorMessage.AlreadyFollowed);
-							}
-						} catch (NumberFormatException nfe) {
-							log("Passed invalid userID to Follow command");
-							ous.writeObject(ErrorMessage.InvalidUserId);
-						}
-						break;
-					}
-					case GetFollowed: {
-						List<Integer> l = ServerData.getFollowed(user.id);
-						ous.writeObject(l);
-						break;
-					}
-					case GetFollowers: {
-						List<Integer> l = ServerData.getFollowers(user.id);
-						ous.writeObject(l);
-						break;
-					}
-					case GetUsernameFromId: {
+					case GetUsernameFromId: { //parameters[0] = userId
 						try {
 							int userID = Integer.parseInt(cmd.parameters[0]);
 							User u = ServerData.getUser(userID);
 							if (u == null) {
 								ous.writeObject(ErrorMessage.InvalidUsername);
+								log("Trying to get the id of a nonexistent user");
 							} else {
 								ous.writeObject(u.username);
 							}
 						} catch (NumberFormatException nfe) {
 							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
 						}
 						break;
 					}
-					case GetPostViewFromId: {
-						try {
-							int postID = Integer.parseInt(cmd.parameters[0]);
-							PostView p = ServerData.getPostViewWithId(postID, user.id);
-							ous.reset();
-							ous.writeObject(p);
-						} catch (NumberFormatException nfe) {
-							ous.writeObject(ErrorMessage.InvalidCommand);
-						} catch (NonexistentPostException e) {
-							ous.writeObject(ErrorMessage.InvalidPostId);
-						}
+					case ListFollowers: { //No parameters
+						List<Integer> l = ServerData.getFollowers(user.id);
+						ous.writeObject(l);
 						break;
 					}
-					case Unfollow: {
-						try {
-							int followedId = Integer.parseInt(cmd.parameters[0]);
-							if (ServerData.unfollow(user.id, followedId)) {
-								ous.writeObject(ErrorMessage.Success);
-							} else {
-								ous.writeObject(ErrorMessage.NotFollowing);
-							}
-						} catch (NumberFormatException nfe) {
-							log("Passed invalid userID to Unfollow command");
-							ous.writeObject(ErrorMessage.InvalidUserId);
-						}
+					case ListFollowing: { //No parameters
+						List<Integer> l = ServerData.getFollowed(user.id);
+						ous.writeObject(l);
 						break;
 					}
-					case Vote:{
+					case ListUsers: { //No parameters
+						ous.writeObject(ServerData.getUsersWithTags(user.tags));
+						break;
+					}
+					case Login: { //parameters[0] = username, parameters[1] = password hash
 						if(cmd.parameters == null || cmd.parameters.length < 2){
 							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
+						}else if(user != null || ServerData.isLoggedIn(cmd.parameters[0])) {
+							ous.writeObject(ErrorMessage.UserAlreadyLoggedIn);
+							log("User already logged in");
+						}else{
+							User u = ServerData.getUser(ServerData.getUserId(cmd.parameters[0]));
+							if(u == null){ //If the user wasn't found
+								ous.writeObject(ErrorMessage.InvalidUsername);
+								log("Invalid username \"" + cmd.parameters[0] + "\"");
+							}else if(u.password.equals(cmd.parameters[1])) {
+								this.user = u;
+								/**
+								 * Putting the dummyFCS in the loggedUsers Map to signify the user has logged in but
+								 * hasn't sent the callback service object yet.
+								 */
+								ServerData.loggedUsers.put(u.id, dummyFCS);
+								ous.writeObject(u.id);
+								log("Logged in as " + u.username);
+							}else{
+								ous.writeObject(ErrorMessage.InvalidPassword);
+								log("Invalid password");
+							}
+						}
+						break;
+					}
+					case Logout: { //No parameters
+						ServerData.logout(user.id);
+						user = null;
+						ous.writeObject(ErrorMessage.Success);
+						break;
+					}
+					case RatePost: { //parameters[0] = postId, parameters[1] = upvote (true) or downvote (false)
+						if(cmd.parameters == null || cmd.parameters.length < 2){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
 						} else {
 							try {
 								int postId = Integer.parseInt(cmd.parameters[0]);
@@ -210,56 +224,88 @@ public class ClientHandler implements Runnable{
 								ous.writeObject(ServerData.vote(postId, user.id, upvote));
 							}catch (NumberFormatException nfe){
 								ous.writeObject(ErrorMessage.InvalidCommand);
+								log("Invalid parameters");
 							} catch (NonexistentPostException e) {
 								ous.writeObject(ErrorMessage.InvalidPostId);
+								log("Invalid postId");
 							}
 						}
 						break;
 					}
-					case AddComment: {
-						if(cmd.parameters == null || cmd.parameters.length < 2){
-							ous.writeObject(ErrorMessage.InvalidCommand);
-						} else {
-							try {
-								int postId = Integer.parseInt(cmd.parameters[0]);
-								String text = cmd.parameters[1];
-								ous.writeObject(ServerData.addComment(postId, user.id, text));
-							}catch (NumberFormatException nfe){
-								ous.writeObject(ErrorMessage.InvalidCommand);
-							} catch (NonexistentPostException e) {
-								ous.writeObject(ErrorMessage.InvalidPostId);
-							}
+					case RewinPost: { //parameters[0] = postId
+						try {
+							ErrorMessage errorMessage = ServerData.rewin(user.id, Integer.parseInt(cmd.parameters[0]));
+							ous.writeObject(errorMessage);
+						} catch (NonexistentPostException npe){
+							ous.writeObject(ErrorMessage.InvalidPostId);
+							log("Invalid postId");
 						}
 						break;
 					}
-					case Logout: {
-						ServerData.logout(user.id);
-						user = null;
-						ous.writeObject(ErrorMessage.Success);
+					case ShowFeed: { //No parameters
+						ous.writeObject(ServerData.getFeed(user.id));
 						break;
 					}
-					case DeletePost: {
+					case ShowPost: { //parameters[0] = postId
 						if(cmd.parameters == null || cmd.parameters.length < 1){
 							ous.writeObject(ErrorMessage.InvalidCommand);
-						}else{
-							try{
-								int postId = Integer.parseInt(cmd.parameters[0]);
-								ous.writeObject(ServerData.deletePost(postId, user.id));
-							} catch (NumberFormatException nfe){
+							log("Invalid parameters");
+						}else {
+							try {
+								int postID = Integer.parseInt(cmd.parameters[0]);
+								PostView p = ServerData.getPostViewWithId(postID, user.id);
+								/**
+								 * Resetting the ObjectOutputStream to invalidate the cache. Removing it might result
+								 * in the client receiving a cached version of the object.
+								 */
+								ous.reset();
+								ous.writeObject(p);
+							} catch (NumberFormatException nfe) {
 								ous.writeObject(ErrorMessage.InvalidCommand);
+								log("Invalid parameters");
 							} catch (NonexistentPostException e) {
 								ous.writeObject(ErrorMessage.InvalidPostId);
+								log("Invalid postId");
 							}
 						}
 						break;
 					}
-					default: {
+					case UnfollowUser: { //parameters[0] = userId of the user to unfollow
+						if(cmd.parameters == null || cmd.parameters.length < 1){
+							ous.writeObject(ErrorMessage.InvalidCommand);
+							log("Invalid parameters");
+						}else {
+							try {
+								int followedId = Integer.parseInt(cmd.parameters[0]);
+								ous.writeObject(ServerData.unfollow(user.id, followedId));
+							} catch (NumberFormatException nfe) {
+								ous.writeObject(ErrorMessage.InvalidUserId);
+								log("Passed invalid userID to Unfollow command");
+							}
+						}
+						break;
+					}
+					case ViewBlog: { //If no parameters returns own blog, otherwise parameters[0] = userId of the user whose blog is to be retrieved
+						if(cmd.parameters == null || cmd.parameters.length < 1){
+							ous.writeObject(ServerData.getPosts(user.id));
+						}else{
+							User u = ServerData.getUser(Integer.parseInt(cmd.parameters[0]));
+							if (u == null) {
+								ous.writeObject(ErrorMessage.NoSuchUser);
+								log("No user with the specified userId");
+							} else {
+								ous.writeObject(ServerData.getPosts(u.id));
+							}
+						}
+						break;
+					}
+					default: { //Invalid command sent
 						ous.writeObject(ErrorMessage.InvalidCommand);
 						break;
 					}
 				}
 			} catch (IOException | ClassNotFoundException e){
-				System.out.println("[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]Disconnected");
+				log("Disconnected");
 				ServerData.logout(user.id);
 				try {
 					ous.close();
@@ -271,16 +317,33 @@ public class ClientHandler implements Runnable{
 		}
 	}
 
-	private void updateBtcFactor() throws IOException {
-		URL randomURL = new URL("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new");
-		URLConnection connection = randomURL.openConnection();
-		BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-		btcFactor = Integer.parseInt(in.readLine());
-		in.close();
+	/**
+	 * Method to retrieve a new conversion factor from random.org
+	 */
+	private void updateBtcFactor(){
+		try {
+			URL randomURL = new URL("https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new");
+			URLConnection connection = randomURL.openConnection();
+			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			btcFactor = Integer.parseInt(in.readLine());
+			in.close();
+		}catch(IOException ioe){
+			//Set a factor of 1 if the retrieval doesn't succeed
+			btcFactor = 1;
+		}
 	}
 
+	/**
+	 * Utility method to write logs
+	 */
 	private void log(String msg){
-		String prelude = "[" + client.getInetAddress() + ":" + client.getPort() + "(" + user.username + ")]";
-		System.out.println(prelude + msg);
+		StringBuilder prelude = new StringBuilder("[")
+				.append(client.getInetAddress())
+				.append(":")
+				.append(client.getPort())
+				.append("(")
+				.append(user == null ? "not logged in" : user.username)
+				.append(")]");
+		System.out.println(prelude.append(msg));
 	}
 }

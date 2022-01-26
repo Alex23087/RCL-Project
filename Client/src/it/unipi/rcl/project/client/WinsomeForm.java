@@ -6,12 +6,19 @@ import it.unipi.rcl.project.common.PostViewShort;
 import javax.swing.*;
 import java.util.List;
 
+/**
+ * Class that represents a single page of the application.
+ * Holds utility functions and initialisation code for the navigation bar.
+ */
 public abstract class WinsomeForm extends Form{
 
 	public WinsomeForm(AppEventDelegate aed){
 		super(aed);
 	}
 
+	/**
+	 * Method called to initialise the navigation bar. Needs to be called after the first stages of the constructor.
+	 */
 	protected final void init(){
 		getFeedButton().setText(resourceBundle.getString("feed"));
 		getDiscoverButton().setText(resourceBundle.getString("discover"));
@@ -32,6 +39,9 @@ public abstract class WinsomeForm extends Form{
 	protected abstract JButton getFeedButton();
 	protected abstract JButton getProfileButton();
 
+	/**
+	 * Creates a panel that shows the posts in the list passed as parameter.
+	 */
 	protected final JPanel makePanelWithPostViews(List<PostViewShort> posts, boolean isBlog){
 		JPanel contents = new JPanel();
 		contents.setLayout(new BoxLayout(contents, BoxLayout.Y_AXIS));
@@ -41,6 +51,9 @@ public abstract class WinsomeForm extends Form{
 		return contents;
 	}
 
+	/**
+	 * Creates a panel that shows the comments in the list passed as parameter.
+	 */
 	protected final JComponent makePanelWithComments(List<Comment> comments){
 		if(comments != null && comments.size() > 0) {
 			JPanel contents = new JPanel();

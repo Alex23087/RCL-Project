@@ -9,7 +9,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+
+/**
+ * Utility class with static methods used to perform various operations
+ */
 public class Utils {
+	/**
+	 * MessageDigest object used to hash passwords
+	 */
 	private static MessageDigest digest;
 
 	static {
@@ -22,11 +29,14 @@ public class Utils {
 
 
 	public static String hashString(String in){
-		return new String(digest.digest(in.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+		return new String(digest.digest(in.getBytes(StandardCharsets.UTF_8)), StandardCharsets.US_ASCII);
 	}
 
+	/**
+	 * Static method that returns a map containing the default client/server configuration
+	 */
 	private static Map<ConfigurationParameter, Object> getDefaultConf(){
-		HashMap<ConfigurationParameter, Object> out = new HashMap<>(10);
+		HashMap<ConfigurationParameter, Object> out = new HashMap<>(11);
 		out.put(ConfigurationParameter.SERVER, "127.0.0.1");
 		out.put(ConfigurationParameter.TCPPORT, 6666);
 		out.put(ConfigurationParameter.UDPPORT, 33333);
@@ -41,27 +51,38 @@ public class Utils {
 		return out;
 	}
 
+	/**
+	 * Static method that reads a configuration file from the specified file.
+	 * If some parameter is not specified in the config file, the default value is used instead.
+	 * The format for each line is
+	 *     PARAMETER=value
+	 */
 	public static Map<ConfigurationParameter, Object> readConfFile(String path){
 		File confFile = new File(path);
+		//Init the map to the one with defaults
 		Map<ConfigurationParameter, Object> out = getDefaultConf();
 		try {
 			Scanner scanner = new Scanner(confFile);
 			while(scanner.hasNextLine()){
 				String line = scanner.nextLine().trim();
-				if(line.startsWith("#")){
+				if(line.startsWith("#")){ //Skip comments (lines starting with #)
 					continue;
 				}
 				int equalsIndex = line.indexOf('=');
-				if(equalsIndex == -1){ //Badly formatted line, skipping
+				if(equalsIndex == -1){ //Badly formatted line, skipping it
 					continue;
 				}
 
 				try {
+					//Get the ConfigurationParameter value from the left side of the '=', ignoring case and whitespace
 					ConfigurationParameter parameter = ConfigurationParameter.valueOf(line.substring(0, equalsIndex).trim().toUpperCase());
+					//Get the value as the right side substring of the '=', removing whitespace
 					String stringValue = line.substring(equalsIndex + 1).trim();
+					//This will hold the value converted to the right type
 					Object value;
 
 					switch (parameter){
+						//Parameters that require conversion to an integer
 						case TCPPORT:
 						case REGPORT:
 						case MCASTPORT:
@@ -71,10 +92,12 @@ public class Utils {
 							value = Integer.parseInt(stringValue);
 							break;
 						}
+						//Parameter that requires conversion to double
 						case AUTHOR_REWARD: {
 							value = Double.parseDouble(stringValue);
 							break;
 						}
+						//All other parameters require string values, which we already have
 						default: {
 							value = stringValue;
 						}

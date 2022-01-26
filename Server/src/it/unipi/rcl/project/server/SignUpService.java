@@ -6,13 +6,21 @@ import it.unipi.rcl.project.common.ISignUpService;
 
 import java.rmi.RemoteException;
 import java.util.Arrays;
-import java.util.Map;
 
+/**
+ * RMI service to register a user on the platform
+ */
 public class SignUpService implements ISignUpService {
 
+	/**
+	 * Signs a user up
+	 */
 	@Override
 	public ErrorMessage signUp(String username, String password, String[] tags) throws RemoteException {
-		if(ServerData.users.containsKey(username)){
+		//Remove whitespace from the start and end of the username and the password
+		username = username.trim();
+		password = password.trim();
+		if(ServerData.getUserId(username) != -1){
 			System.out.println("User tried to sign up with an already existing username: " + username);
 			return ErrorMessage.UserAlreadyExists;
 		}
@@ -34,6 +42,10 @@ public class SignUpService implements ISignUpService {
 		return ErrorMessage.Success;
 	}
 
+	/**
+	 * Register the RMI callback service to notify users that someone has followed/unfollowed them.
+	 * Only registers the service if the associated user is logged in.
+	 */
 	@Override
 	public void registerFollowCallback(IFollowedCallbackService fcs, int userId) throws RemoteException {
 		if(ServerData.loggedUsers.containsKey(userId)){
@@ -43,14 +55,14 @@ public class SignUpService implements ISignUpService {
 	}
 
 	private static boolean isUsernameValid(String username){
-		return true;
+		return username != null && username.trim().length() > 0;
 	}
 
 	private static boolean isPasswordValid(String password){
-		return true;
+		return password != null && password.length() > 0;
 	}
 
 	private static boolean isTagArrayValid(String[] tags){
-		return true;
+		return tags != null && tags.length > 0;
 	}
 }
